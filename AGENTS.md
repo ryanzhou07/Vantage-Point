@@ -1,271 +1,564 @@
-# Vantage-Point Agent Governance
+# Vantage-Point Agent Rules
 
 ## 1. Purpose
 
-This file defines the project-wide rules governing all AI development agents working on Vantage-Point.
+This file defines how coding agents work inside Vantage-Point.
 
-Every agent must follow this file in addition to its own `AGENT.md`.
-
-An individual agent's instructions may further restrict its behavior but may not override or weaken the rules in this file.
+All agents must follow these rules.
 
 ---
 
-## 2. Authority Hierarchy
+# 2. Authority
 
-The authority hierarchy is:
+Order of authority:
 
 1. Project owner
-2. Approved project requirements and architectural decisions
-3. Root `AGENTS.md`
-4. Assigned task specification
-5. Domain-specific `AGENT.md`
+2. Approved `PROJECT.md`
+3. Approved `DESIGN.md`
+4. This `AGENTS.md`
+5. Assigned `VP-###` task
 6. Existing implementation
 
-Agents must not reinterpret lower-level information in a way that conflicts with higher-level authority.
+If requirements conflict or an implementation would require violating a higher-authority source, stop and escalate.
 
-When a conflict cannot be resolved from the repository, the issue must be escalated.
-
----
-
-## 3. Source of Truth
-
-Agents must use repository artifacts as the persistent source of truth.
-
-Important sources include:
-
-- `PROJECT.md`
-- Approved requirements
-- Architecture Decision Records
-- Shared contracts
-- Task specifications
-- Database migrations
-- Tests
-- Source code
-
-Agents must not rely on conversational memory when an authoritative repository artifact exists.
+Do not silently reinterpret requirements.
 
 ---
 
-## 4. Task Requirement
+# 3. Required Reading
 
-Agents perform implementation work only through defined tasks.
+Before implementing a task, an agent must understand:
 
-A task must establish:
+```text
+AGENTS.md
++
+relevant PROJECT.md section
++
+relevant DESIGN.md section
++
+assigned VP-### task
+```
 
-- Objective
-- Owner
+Agents should not invent product behavior because a requirement appears incomplete.
+
+---
+
+# 4. Task Requirement
+
+Implementation work must correspond to an approved task under:
+
+```text
+agents/tasks/
+```
+
+A task defines:
+
 - Scope
+- Owner
 - Dependencies
 - Requirements
 - Acceptance criteria
 - Testing requirements
-- Relevant shared-resource impact
 
-Agents must remain within the assigned task scope.
-
-If additional work is discovered, it must be reported to the Orchestrator rather than silently expanding the task.
+The task is the authoritative work order.
 
 ---
 
-## 5. Domain Ownership
+# 5. Scope
 
-Vantage-Point uses domain-oriented development ownership.
+Agents implement only the assigned task.
 
-Primary domains are:
-
-- Foundation
-- Banking
-- Receipts
-- Dashboard
-
-Each domain agent may work across frontend, backend, database, and tests when those changes belong to its domain and task.
-
-Ownership is based on product responsibility rather than technical layer.
-
-An agent must not modify another domain's behavior without explicit authorization.
+If an agent notices unrelated improvements, it should report them rather than silently expanding scope.
 
 ---
 
-## 6. Shared Resources
+# 6. Agent Roles
 
-Some resources affect multiple domains and therefore require additional coordination.
+Vantage-Point uses:
 
-Shared resources may include:
+```text
+Orchestrator
+Foundation
+Banking
+Receipts
+Dashboard
+Integration / Review
+```
 
-- User identity
-- Authentication infrastructure
-- Shared authorization infrastructure
-- Shared API contracts
-- Shared types
-- Common libraries
-- Application-wide configuration
-- Database-wide conventions
-- CI/CD infrastructure
-- Deployment infrastructure
-
-A feature agent must not make a breaking shared-resource change without coordination through the Orchestrator and appropriate review.
+Feature agents own vertical product slices rather than only frontend or backend layers.
 
 ---
 
-## 7. Database Rules
+# 7. Orchestrator
 
-Database changes must be performed through migrations.
+The Orchestrator:
 
-Agents must not silently modify an existing applied migration.
+- Converts approved plans into tasks.
+- Tracks dependencies.
+- Assigns work.
+- Maintains task status.
+- Routes work for review.
+- Identifies blockers.
+- Coordinates agents.
 
-Database objects should have clear domain ownership.
+The Orchestrator does not independently change:
 
-Cross-domain schema changes require coordination.
+- Product requirements
+- MVP scope
+- Major architecture
+- Technology choices
+- Domain ownership
 
-Authoritative currency calculations must not use floating-point arithmetic.
-
-Financial values must use an exact representation such as integer minor units or another approved exact representation.
-
-Database constraints and transactions should enforce correctness where application-level validation alone is insufficient.
-
----
-
-## 8. Contract Rules
-
-Interfaces shared between components or domains must have an explicit source of truth.
-
-Agents must not independently create incompatible assumptions about shared APIs, events, or data structures.
-
-Breaking contract changes require coordination with affected domains.
+The Orchestrator does not self-approve implementation work.
 
 ---
 
-## 9. Security Rules
+# 8. Foundation Agent
 
-Agents must follow least-privilege principles.
+Owns:
 
-Secrets and credentials must never be:
+- Supabase authentication integration
+- Google OAuth application integration
+- Canonical user identity
+- Profiles
+- Shared authentication middleware
+- Authenticated request context
+- Shared identity contracts
+- Foundation tests
 
-- Committed to source control
-- Exposed to frontend code when backend-only
-- Intentionally logged
-- Embedded directly in source code
+Does not own:
 
-Financial-provider credentials and per-user financial connection credentials must remain backend-only.
+- Banking business logic
+- Receipt business logic
+- Dashboard business logic
 
-Agents must not weaken authentication, authorization, validation, or security controls merely to simplify implementation.
-
----
-
-## 10. Git Rules
-
-Development work must occur outside the protected main branch.
-
-Tasks should use isolated branches or worktrees where practical.
-
-Agents must not push directly to `main`.
-
-Agents must not rewrite unrelated work.
-
-Agents must keep changes within task scope.
+Receipt participants are not normal Vantage-Point users.
 
 ---
 
-## 11. Testing Rules
+# 9. Banking Agent
 
-Agents are responsible for testing work within their domain.
+Owns the full Banking vertical slice:
+
+- Teller integration
+- Plaid integration where approved
+- Provider adapters
+- Institution connections
+- Provider credentials handling
+- Accounts
+- Balances
+- Transactions
+- Pending→posted reconciliation
+- Banking synchronization
+- Banking worker
+- Provider webhooks
+- Provider-event idempotency
+- Recurring activity
+- Banking APIs
+- Banking schema/migrations
+- Banking UI
+- Banking tests
+
+Does not own:
+
+- Authentication identity
+- Receipt splitting
+- Dashboard-wide aggregation
+- Safe-to-spend
+- Forecasting
+- Rewards optimization
+- Automated reimbursement reconciliation
+
+---
+
+# 10. Receipt Agent
+
+Owns the full Receipt vertical slice:
+
+- Receipt upload
+- Receipt image handling
+- OCR/vision integration
+- Receipt review
+- Receipt items
+- Participants
+- Temporary sessions
+- QR/share links
+- Realtime collaboration
+- Claims/allocations
+- Allocation concurrency
+- Participant submissions
+- Owner corrections
+- Reconfirmation
+- Audit history
+- Receipt lifecycle
+- Receipt revisions/reset
+- Tax/tip allocation
+- Finalization
+- Receivables
+- Manual paid status
+- Receipt APIs
+- Receipt schema/migrations
+- Receipt UI
+- Receipt tests
+
+---
+
+# 11. Dashboard Agent
+
+Owns:
+
+- Authenticated application shell
+- Navigation
+- Dashboard overview
+- Cross-domain presentation
+- Responsive/mobile presentation
+- Loading states
+- Empty states
+- Error states
+- Presentation aggregation
+
+The Dashboard Agent does not redefine Banking or Receipt financial semantics.
+
+---
+
+# 12. Integration / Review Agent
+
+Independently reviews implementation for:
+
+- Acceptance criteria
+- Scope
+- Architecture
+- Domain ownership
+- Contracts
+- Database safety
+- Authentication/authorization
+- Security
+- Financial precision
+- Concurrency
+- Idempotency
+- Tests
+- Regression risk
+- CI results
+
+Possible review results:
+
+```text
+APPROVED
+CHANGES REQUIRED
+ESCALATION REQUIRED
+```
+
+The Integration Agent does not normally fix the feature itself.
+
+---
+
+# 13. Domain Ownership
+
+Agents should primarily modify their owned domain paths.
+
+Cross-domain changes require explicit review.
+
+Shared resources require extra care.
+
+Examples:
+
+```text
+canonical identity
+shared contracts
+shared middleware
+platform infrastructure
+database-wide configuration
+CI
+```
+
+No agent may casually redefine a shared resource to make its own task easier.
+
+---
+
+# 14. Database Rules
+
+One PostgreSQL/Supabase database is used for MVP.
+
+Agents own migrations for their domains.
+
+Foundation owns profile/shared identity schema.
+
+Banking owns Banking schema.
+
+Receipt owns Receipt schema.
+
+Rules:
+
+1. Create migrations for schema changes.
+2. Never casually rewrite an already-applied migration.
+3. Do not modify another domain's schema without explicit task authorization.
+4. Cross-domain foreign keys/contracts require Integration Review.
+5. Use exact integer money.
+6. Preserve referential integrity.
+7. Important uniqueness/idempotency constraints belong near the database where appropriate.
+8. Database migrations must pass CI.
+
+There is no separate Database Agent.
+
+---
+
+# 15. Financial Correctness
+
+Authoritative financial values must not use floating point.
+
+Use integer minor units.
+
+Receipt allocation, finalization, tax/tip distribution, and Banking normalization must follow `DESIGN.md`.
+
+Frontend calculations are never authoritative.
+
+---
+
+# 16. Security
 
 Agents must not:
 
-- Remove valid tests simply to make a task pass
-- Disable failing tests without authorization
-- Ignore failures affecting their task
-- Claim successful completion when required validation has not passed
+- Commit secrets.
+- Log credentials.
+- Expose service-role credentials to browsers.
+- Trust frontend user IDs.
+- Trust receipt IDs as authorization.
+- Disable authorization to make tests pass.
+- Store raw provider secrets in frontend code.
+- Store raw temporary bearer tokens unnecessarily.
 
-Relevant tests must accompany behavior changes where appropriate.
-
----
-
-## 12. Review Rules
-
-Feature agents do not approve their own work.
-
-Implementation readiness and integration approval are separate states.
-
-Completed implementation must be routed through the defined review process.
-
-The Integration / Review Agent may approve work or request changes but does not redefine product requirements.
+External inputs must be validated and bounded.
 
 ---
 
-## 13. Architecture Changes
+# 17. Traffic Protection
 
-Agents may make routine implementation decisions within established architecture.
+Agents must consider:
 
-Material architectural changes require explicit review.
+- Rate limiting
+- Request deduplication
+- Pagination
+- Caching
+- Timeouts
+- Retry bounds
+- Backpressure
+- Worker concurrency
 
-When a significant architectural change is necessary:
+when implementing relevant endpoints.
 
-1. Stop the affected work when appropriate.
-2. Report the issue to the Orchestrator.
-3. Document the proposed decision through the project's architecture-decision process.
-4. Obtain required approval.
-5. Resume implementation only after the decision is resolved.
-
-Agents must not silently redefine Vantage-Point architecture.
-
----
-
-## 14. Requirements
-
-Agents implement approved requirements.
-
-Agents must not:
-
-- Add major product functionality without approval
-- Remove requirements because implementation is difficult
-- Redefine MVP scope
-- Treat an implementation assumption as an approved requirement
-
-Requirement ambiguity must be escalated.
+Expensive provider operations must not be triggered without bounds by ordinary frontend traffic.
 
 ---
 
-## 15. Merge Authority
+# 18. Caching
 
-No feature agent may independently merge its own work into the protected main branch.
+Caches are performance layers, not financial authorities.
 
-Passing tests or Integration Review does not itself grant merge authority.
+Cache entries containing private financial data must be correctly scoped.
 
-Merge policy is controlled separately by the project owner and repository configuration.
-
----
-
-## 16. Deployment Authority
-
-Feature agents may not independently deploy Vantage-Point to production.
-
-Production deployment authority is controlled separately from feature implementation.
-
-Agents must not assume that merged code is automatically authorized for production deployment.
+A mutation must validate authoritative state regardless of cached frontend/server state.
 
 ---
 
-## 17. Escalation
+# 19. Provider Boundaries
 
-Agents must escalate when work requires:
+Teller/Plaid/model-provider structures should remain behind adapters.
 
-- Changing approved product requirements
-- Material architecture changes
-- Breaking shared contracts
-- Unauthorized cross-domain modifications
-- Major technology changes
-- Security-policy changes
-- Unclear ownership
-- Conflicting requirements
-- Work outside assigned scope
+Domain code should consume normalized Vantage-Point types.
 
-Agents should not guess when the decision materially affects other domains or the product architecture.
+Tests should use fake/sandbox providers unless a task explicitly requires real-provider integration testing.
 
 ---
 
-## 18. Completion Principle
+# 20. Git Workflow
 
-A feature agent declaring implementation complete means only that the implementation is ready for review.
+Normal workflow:
 
-A task becomes officially completed only after the required review and project workflow have been satisfied.
+```text
+VP task
+   ↓
+dedicated branch/worktree
+   ↓
+implementation
+   ↓
+tests
+   ↓
+pull request
+   ↓
+CI
+   ↓
+Integration Review
+   ↓
+merge
+```
+
+Agents do not push directly to `main`.
+
+Agents do not independently merge their own feature work.
+
+Agents do not deploy production unless explicitly authorized by an approved deployment task.
+
+---
+
+# 21. Branches
+
+One implementation task should normally have one dedicated branch/worktree.
+
+Multiple coding agents should not simultaneously work on the same branch.
+
+Branch naming may use:
+
+```text
+vp-###-short-description
+```
+
+---
+
+# 22. Testing
+
+Agents must provide tests appropriate to their change.
+
+Relevant categories include:
+
+- Unit
+- Integration
+- Authorization
+- Financial correctness
+- Concurrency
+- Idempotency
+- Rate limiting
+- Cache isolation
+- Responsive/E2E
+
+Do not add meaningless tests solely to increase test counts.
+
+---
+
+# 23. Local Before CI
+
+Agents should run relevant local checks before requesting review.
+
+CI should automate the same fundamental checks.
+
+Agents may not disable valid CI checks simply to produce a green build.
+
+---
+
+# 24. Architecture Changes
+
+If a task requires changing a major approved architecture decision, stop and escalate.
+
+Examples:
+
+- Separate physical database
+- New core framework
+- New authentication model
+- New canonical identity
+- Replacing Teller
+- Adding major infrastructure
+- Creating a new microservice
+- Changing money representation
+
+If approved, record the decision under:
+
+```text
+agents/decisions/
+```
+
+when long-term architectural memory is useful.
+
+---
+
+# 25. Requirements Changes
+
+Agents do not silently change `PROJECT.md`.
+
+If implementation reveals a product requirement problem, report it.
+
+The project owner approves product changes.
+
+---
+
+# 26. Contract Changes
+
+Breaking API/shared contract changes require Integration Review.
+
+An agent must consider consumers before changing shared contracts.
+
+---
+
+# 27. Task Lifecycle
+
+Tasks use:
+
+```text
+BACKLOG
+   ↓
+READY
+   ↓
+ACTIVE
+   ↓
+REVIEW
+   ↓
+COMPLETED
+```
+
+Additional state:
+
+```text
+BLOCKED
+```
+
+The implementation agent reports work ready for review.
+
+It does not unilaterally declare the official task `COMPLETED`.
+
+---
+
+# 28. Review
+
+The Integration / Review Agent evaluates the task against:
+
+```text
+PROJECT.md
+DESIGN.md
+AGENTS.md
+VP task acceptance criteria
+CI
+```
+
+Green CI is necessary where required but does not automatically imply approval.
+
+---
+
+# 29. Completion
+
+A task is complete when:
+
+- Required implementation exists.
+- Acceptance criteria are satisfied.
+- Required tests pass.
+- CI passes.
+- Integration Review approves.
+- Required documentation/contracts are updated.
+- Orchestrator records completion.
+
+---
+
+# 30. Guiding Principle
+
+Agents should prefer:
+
+```text
+small
+reviewable
+tested
+domain-owned
+financially correct
+```
+
+changes over large speculative rewrites.
+
+Build the approved Vantage-Point MVP.
+
+Do not redesign the entire system while implementing one task.
