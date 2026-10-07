@@ -61,7 +61,30 @@ See `DESIGN.md` for the authoritative technical design.
 
 ## Development
 
-Local setup commands will be added as the initial repository/bootstrap tasks are implemented.
+Use Node.js `22.21.0`, pnpm `10.34.6`, and Go `1.24.2`. Enable pnpm through Corepack (or install the pinned pnpm release), then:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+The web app runs at `http://localhost:3000`. To start the API in another terminal:
+
+```sh
+cd services/backend
+go run ./cmd/api
+```
+
+The API listens on `http://localhost:8080` by default and exposes `GET /health`. Copy `.env.example` to `apps/web/.env.local` for web configuration. Set `API_PORT` in the API process environment if a different port is needed.
+
+Local review commands:
+
+```sh
+pnpm lint
+pnpm typecheck
+pnpm build
+cd services/backend && go vet ./... && go test ./... && go build ./...
+```
 
 Do not use production financial credentials or production financial data for ordinary local development.
 

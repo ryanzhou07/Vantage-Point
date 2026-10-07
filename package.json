@@ -1,0 +1,14 @@
+{
+  "name": "vantage-point",
+  "private": true,
+  "packageManager": "pnpm@10.34.6",
+  "engines": {
+    "node": "22.21.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @vantage-point/web dev",
+    "lint": "pnpm --filter @vantage-point/web lint",
+    "typecheck": "pnpm --filter @vantage-point/web typecheck",
+    "build": "pnpm --filter @vantage-point/web build"
+  }
+}
