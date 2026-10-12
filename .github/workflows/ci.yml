@@ -59,8 +59,13 @@ jobs:
         with:
           node-version: 22.21.0
       - run: pnpm install --frozen-lockfile
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.26.9
+          cache: false
       - run: pnpm db:start
       - run: pnpm db:validate
+      - run: pnpm auth:integration
       - if: always()
         run: pnpm db:stop
   security:
