@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# Ignored owner-created local OAuth configuration. Never print these values.
+if [[ -f .env.oauth.local ]]; then
+  set -a
+  source .env.oauth.local
+  set +a
+fi
+# Synthetic values let offline CI start Auth; they cannot pass real Google login.
+export GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-offline-fixture.apps.googleusercontent.com}
+export GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-offline-fixture-only}
 if [[ $# != 1 ]]; then echo 'Usage: local-db.sh start|stop|validate (no target arguments)' >&2; exit 2; fi
 case "$1" in start|stop|validate) ;; *) echo 'Unsupported local operation' >&2; exit 2;; esac
 # Reject remote Docker daemons, even though --local targets Docker rather than Supabase cloud.
@@ -33,6 +42,7 @@ case "$1" in
     else
       echo 'No application migrations yet; CLI does not create an empty migration registry.'
     fi
+    if [[ -f scripts/test-profile-concurrency.sh ]]; then bash scripts/test-profile-concurrency.sh; fi
     echo 'Repository schema assertions passed.'
     ;;
 esac

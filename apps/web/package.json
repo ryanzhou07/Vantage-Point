@@ -8,9 +8,10 @@
     "typecheck": "tsc --noEmit",
     "build": "next build --webpack",
     "start": "next start",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"

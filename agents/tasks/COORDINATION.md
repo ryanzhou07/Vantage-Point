@@ -13,8 +13,8 @@ Approved by the project owner on 2026-10-11. Implementation and review are deleg
 ## Proposed tasks and gates
 | Task | Status | Dependency gate | Implementer | Reviewer |
 | --- | --- | --- | --- | --- |
-| VP-002 — Local Supabase/migrations/initial CI | ACTIVE, approved | VP-001 owner-confirmed complete | Foundation subagent | Separate Integration/Review subagent |
-| VP-003 — Auth/profiles | BACKLOG | VP-002 COMPLETED | Foundation subagent | Separate Integration/Review subagent |
+| VP-002 — Local Supabase/migrations/initial CI | COMPLETED, independently APPROVED | VP-001 owner-confirmed complete | Foundation subagent | Separate Integration/Review subagent |
+| VP-003 — Auth/profiles | ACTIVE | VP-002 COMPLETED | Foundation subagent | Separate Integration/Review subagent |
 
 Local tooling and initial CI form one bounded setup task so there is no circular completion dependency. VP-002 must pass hosted CI and independent review before completion. VP-003 remains BACKLOG until that full gate is satisfied.
 
@@ -30,3 +30,12 @@ After authentication, propose Dashboard shell and one domain vertical slice usin
 
 ## Delivery and testing
 Implementation agents follow `agents/TESTING.md`, push only their dedicated task branches, and provide branch/compare or draft PR links. Push locally checked work to trigger hosted CI, then corrections as necessary; final delivery must identify the remote commit reviewed. No force pushes, main pushes, merges, or deployments. Hosted CI must pass before task completion.
+
+## Owner-approved security remediation — 2026-10-11
+Owner explicitly authorized Go 1.26.9 pin/CI/documentation update and full retest, plus assessment of the exact unpatched lint-only braces advisory exception GHSA-vfj7-8cjw-p6xm subject to independent review. Foundation must record the bounded decision and preserve other blocking checks.
+
+VP-002 implementation reviewed at `9362d9906282ada561acbcecc414a4ab9d4d7b45`; draft PR #1, final hosted PR/push CI passed. Separate independent review APPROVED; Orchestrator recorded COMPLETED. VP-003 is READY.
+
+VP-002 independent reviewer returned APPROVED on 2026-10-11 at `9362d9906282ada561acbcecc414a4ab9d4d7b45`, with hosted CI and independently repeated checks. Orchestrator recorded COMPLETED; branch/PR remain unmerged. VP-003 dependency gate is satisfied and status is READY. Owner is preparing local Google OAuth client; real OAuth smoke verification remains a VP-003 gate.
+
+GitHub confirms owner ryanzhou07 merged PR #1 at `6c3dbbc745813de7997b065dc66b70f5b2ce0d7b`. VP-003 assigned ACTIVE on a dedicated worktree based on that merged main; it remains subject to separate independent review and owner PR review. VP-002 lifecycle docs publication head is `7511b1907dbeecedc3f02622dc65f614a41bc6ca`.
