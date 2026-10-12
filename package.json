@@ -9,6 +9,16 @@
     "dev": "pnpm --filter @vantage-point/web dev",
     "lint": "pnpm --filter @vantage-point/web lint",
     "typecheck": "pnpm --filter @vantage-point/web typecheck",
-    "build": "pnpm --filter @vantage-point/web build"
+    "build": "pnpm --filter @vantage-point/web build",
+    "test": "pnpm --filter @vantage-point/web test",
+    "db:start": "bash scripts/local-db.sh start",
+    "db:stop": "bash scripts/local-db.sh stop",
+    "db:validate": "bash scripts/local-db.sh validate",
+    "backend:check": "bash scripts/check-backend.sh",
+    "security:secrets": "bash scripts/check-secrets.sh",
+    "security:dependencies": "bash scripts/check-dependencies.sh"
+  },
+  "devDependencies": {
+    "supabase": "2.120.0"
   }
 }

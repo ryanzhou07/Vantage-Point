@@ -1,3 +1,3 @@
 module github.com/ryanzhou07/Vantage-Point/services/backend
 
-go 1.24.2
+go 1.26.9

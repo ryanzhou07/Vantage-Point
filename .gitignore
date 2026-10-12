@@ -21,3 +21,10 @@ coverage.out
 .DS_Store
 .idea/
 .vscode/
+
+# Local Supabase/tool logs and agent worktrees
+supabase/.temp/
+supabase/.branches/
+.local-logs/
+.worktrees/
+.pnpm-store/
