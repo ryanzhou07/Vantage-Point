@@ -4,7 +4,7 @@ Approved task acceptance criteria remain authoritative. These guidelines specify
 
 ## Common checks
 
-- Use the repository-pinned Node, pnpm, Go, and Supabase versions. Record actual versions. Do not upgrade a runtime without owner authorization. The owner authorized Go 1.26.9 for VP-002 on 2026-10-11 to remediate baseline standard-library vulnerabilities.
+- Use the repository-pinned Node, pnpm, Go, and Supabase versions. Record actual versions. Do not upgrade a runtime without authorization. On 2026-10-11 the owner explicitly authorized Go 1.26.9 with full retesting to remediate reported standard-library advisories.
 - From the worktree root run frozen dependency installation, `pnpm lint`, `pnpm typecheck`, the test command introduced by VP-002, and `pnpm build`.
 - From `services/backend` check that `gofmt -l` on tracked Go source is empty, then run `go vet ./...`, `go test ./...`, and `go build ./...`. Formatting drift must produce a failing check.
 - Use a disposable local database, apply all migrations from zero, and run schema assertions. Never reset a remote database. Commands must fail on migration/assertion errors.
@@ -39,3 +39,6 @@ Implementation agents record working directory, command, tool versions, result/e
 A separate Integration/Review subagent independently inspects the exact diff and evidence, repeats meaningful checks where available, and reports APPROVED, CHANGES REQUIRED, or ESCALATION REQUIRED. Corrections require independent re-review and CI for the corrected code. Implementation agents never approve their own work or mark tasks officially COMPLETED.
 
 The Orchestrator records COMPLETED only after all task completion requirements pass. Final branch delivery is for the owner's PR review; no merge or deployment is authorized.
+
+## Owner-approved advisory handling — 2026-10-11
+The owner authorized assessment/documentation of a temporary exact exception for GHSA-vfj7-8cjw-p6xm in the existing lint-only braces dependency, subject to independent review. Preserve scanning coverage, document the exposure/rationale/revisit trigger, and keep all other findings blocking. This is not permission to suppress other failures.
