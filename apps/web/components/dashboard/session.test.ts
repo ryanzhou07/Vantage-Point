@@ -12,7 +12,7 @@ describe('Dashboard private session lifecycle', () => {
   it('clears owner A immediately and rejects a late response after owner B signs in', async () => {
     const pending: ((profile: Profile | null) => void)[] = [];
     const states: DashboardSession[] = [];
-    const load = vi.fn((_signal: AbortSignal) => new Promise<Profile | null>((resolve) => pending.push(resolve)));
+    const load = vi.fn<(signal: AbortSignal) => Promise<Profile | null>>(() => new Promise<Profile | null>((resolve) => pending.push(resolve)));
     const session = createDashboardSession(load, (state) => states.push(state));
 
     session.refresh();
