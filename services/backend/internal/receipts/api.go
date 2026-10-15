@@ -79,6 +79,9 @@ func storeError(w http.ResponseWriter, e error) {
 	case "RECEIPT_CONFLICT":
 		status = 409
 		msg = "This receipt changed. Reload before saving again."
+	case "RECEIPT_INVALID_REVIEW", "RECEIPT_INVALID_ALLOCATION":
+		status = 422
+		msg = "Check item assignments and receipt amounts before saving."
 	case "RECEIPT_NOT_REVIEWABLE", "RECEIPT_RETRY_LIMIT":
 		status = 409
 		msg = "This operation is unavailable for the current receipt state."
@@ -321,6 +324,31 @@ func (a *API) save(w http.ResponseWriter, r *http.Request, owner, id string) {
 	for _, p := range in.Draft.Participants {
 		if !bounded(p.ID, 64) || !bounded(p.Name, 100) {
 			apiError(w, 422, "INVALID_REVIEW", "Check participant names.")
+			return
+		}
+	}
+	if in.Draft.Date != "" {
+		if _, e := time.Parse("2006-01-02", in.Draft.Date); e != nil {
+			apiError(w, 422, "INVALID_REVIEW", "Use YYYY-MM-DD for the receipt date, or leave it empty.")
+			return
+		}
+	}
+	in.Draft = canonicalizeDraft(id, in.Draft)
+	if e := ValidateProposal(in.Draft.Proposal); e != nil {
+		apiError(w, 422, "INVALID_REVIEW", e.Error())
+		return
+	}
+	participantIDs := map[string]bool{}
+	for _, person := range in.Draft.Participants {
+		if participantIDs[person.ID] {
+			apiError(w, 422, "INVALID_REVIEW", "Participant IDs must be unique.")
+			return
+		}
+		participantIDs[person.ID] = true
+	}
+	for _, item := range in.Draft.Items {
+		if item.ParticipantID != "" && !participantIDs[item.ParticipantID] {
+			apiError(w, 422, "INVALID_REVIEW", "Choose an existing participant for every assignment.")
 			return
 		}
 	}

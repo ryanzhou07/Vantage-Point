@@ -30,8 +30,8 @@ DO $$ declare j jsonb;accepted boolean;begin
  accepted:=public.receipt_finish((j->'receipt'->>'id')::uuid,(j->>'lease_token')::uuid,'{}',null,false);
  if not accepted then raise exception 'valid lease rejected';end if;
  if public.receipt_finish((j->'receipt'->>'id')::uuid,(j->>'lease_token')::uuid,'{}',null,false) then raise exception 'duplicate finish accepted';end if;
- perform public.receipt_save('00000000-0000-4000-8000-000000000081',current_setting('test.receipt_one')::uuid,3,'{}',null);
- begin perform public.receipt_save('00000000-0000-4000-8000-000000000081',current_setting('test.receipt_one')::uuid,3,'{}',null);raise exception 'stale overwrite';exception when raise_exception then if sqlerrm<>'RECEIPT_CONFLICT' then raise;end if;end;
+ perform public.receipt_save('00000000-0000-4000-8000-000000000081',current_setting('test.receipt_one')::uuid,3,'{"merchant":"","date":"","currency":"USD","items":[{"id":"item","name":"Synthetic","quantity":1,"amount_minor":0,"participant_id":""}],"subtotal_minor":0,"tax_minor":0,"tip_minor":0,"discount_minor":0,"total_minor":0,"participants":[],"tax_method":"","tip_method":""}',null);
+ begin perform public.receipt_save('00000000-0000-4000-8000-000000000081',current_setting('test.receipt_one')::uuid,3,'{"merchant":"","date":"","currency":"USD","items":[{"id":"item","name":"Synthetic","quantity":1,"amount_minor":0,"participant_id":""}],"subtotal_minor":0,"tax_minor":0,"tip_minor":0,"discount_minor":0,"total_minor":0,"participants":[],"tax_method":"","tip_method":""}',null);raise exception 'stale overwrite';exception when raise_exception then if sqlerrm<>'RECEIPT_CONFLICT' then raise;end if;end;
 end $$;
 -- Lease expiry reclaims work with a fresh fencing token; retries are capped.
 DO $$ declare j jsonb;k jsonb;rid uuid;begin

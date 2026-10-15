@@ -2,6 +2,8 @@
 package receipts
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"sort"
@@ -179,4 +181,28 @@ func distribute(amount int64, weights []int64, total int64) []int64 {
 		}
 	}
 	return out
+}
+
+// canonicalDraftID converts legacy advisory/client keys to receipt-scoped UUIDs.
+// MD5 is only a stable identifier mapping, never a credential or auth mechanism.
+// PostgreSQL receipt_internal_id uses the same byte string and UUID formatting.
+func canonicalDraftID(receipt, kind, value string) string {
+	if receiptID.MatchString(strings.ToLower(value)) {
+		return strings.ToLower(value)
+	}
+	sum := md5.Sum([]byte(receipt + ":" + kind + ":" + value))
+	raw := hex.EncodeToString(sum[:])
+	return raw[:8] + "-" + raw[8:12] + "-" + raw[12:16] + "-" + raw[16:20] + "-" + raw[20:]
+}
+func canonicalizeDraft(receipt string, d Draft) Draft {
+	for n := range d.Participants {
+		d.Participants[n].ID = canonicalDraftID(receipt, "participant", d.Participants[n].ID)
+	}
+	for n := range d.Items {
+		d.Items[n].ID = canonicalDraftID(receipt, "item", d.Items[n].ID)
+		if d.Items[n].ParticipantID != "" {
+			d.Items[n].ParticipantID = canonicalDraftID(receipt, "participant", d.Items[n].ParticipantID)
+		}
+	}
+	return d
 }

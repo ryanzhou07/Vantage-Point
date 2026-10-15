@@ -17,7 +17,7 @@ export function ReceiptEditor({ draft, disabled, onChange }: Props) {
       <p>Extraction is a proposal. Check the image and correct every line. Enter complete line amounts in cents; quantity is descriptive.</p>
       <div className={styles.fields}>
         <label>Merchant<input maxLength={200} value={draft.merchant} onChange={(event) => update({ merchant: event.target.value })} /></label>
-        <label>Receipt date<input maxLength={32} value={draft.date} onChange={(event) => update({ date: event.target.value })} /></label>
+        <label>Receipt date (YYYY-MM-DD)<input maxLength={32} value={draft.date} onChange={(event) => update({ date: event.target.value })} /></label>
         <label>Currency<select value={draft.currency} onChange={(event) => update({ currency: event.target.value })}><option value="USD">USD</option>{draft.currency !== 'USD' && <option value={draft.currency}>{draft.currency || 'Unknown'}</option>}</select></label>
       </div>
 

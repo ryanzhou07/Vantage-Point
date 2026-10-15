@@ -67,7 +67,7 @@ func (s *Store) request(ctx context.Context, method, path, mime string, data []b
 		}
 		_ = json.Unmarshal(b, &failure)
 		switch failure.Message {
-		case "RECEIPT_QUOTA", "RECEIPT_NOT_FOUND", "RECEIPT_CONFLICT", "RECEIPT_NOT_REVIEWABLE", "RECEIPT_RETRY_LIMIT":
+		case "RECEIPT_QUOTA", "RECEIPT_NOT_FOUND", "RECEIPT_CONFLICT", "RECEIPT_NOT_REVIEWABLE", "RECEIPT_RETRY_LIMIT", "RECEIPT_INVALID_REVIEW", "RECEIPT_INVALID_ALLOCATION":
 			return nil, errors.New(failure.Message)
 		}
 		return nil, errors.New("RECEIPT_UNAVAILABLE")
@@ -79,35 +79,31 @@ func (s *Store) rpc(ctx context.Context, name string, in, out any) error {
 	if e != nil {
 		return e
 	}
-	data, e := s.request(ctx, "POST", "/rest/v1/rpc/"+name, "application/json", b, 262144)
+	limit := int64(262144)
+	if name == "receipt_documents" {
+		limit = 5242880
+	}
+	data, e := s.request(ctx, "POST", "/rest/v1/rpc/"+name, "application/json", b, limit)
 	if e != nil {
 		return e
 	}
 	return json.Unmarshal(data, out)
 }
 func (s *Store) get(ctx context.Context, owner, id string) (Record, error) {
-	data, e := s.request(ctx, "GET", "/rest/v1/receipts?owner_id=eq."+url.QueryEscape(owner)+"&id=eq."+url.QueryEscape(id)+"&limit=1", "", nil, 262144)
-	if e != nil {
-		return Record{}, e
+	var record Record
+	err := s.rpc(ctx, "receipt_document", map[string]string{"p_owner": owner, "p_id": id}, &record)
+	if err != nil {
+		return Record{}, err
 	}
-	var rows []Record
-	if json.Unmarshal(data, &rows) != nil {
-		return Record{}, errors.New("RECEIPT_UNAVAILABLE")
-	}
-	if len(rows) != 1 {
+	if record.ID != id {
 		return Record{}, errors.New("RECEIPT_NOT_FOUND")
 	}
-	return rows[0], nil
+	return record, nil
 }
 func (s *Store) list(ctx context.Context, owner string) ([]Record, error) {
-	// Fixed bounded first page; no unbounded financial history response.
-	data, e := s.request(ctx, "GET", "/rest/v1/receipts?owner_id=eq."+url.QueryEscape(owner)+"&order=created_at.desc,id.desc&limit=20", "", nil, 5242880)
-	if e != nil {
-		return nil, e
-	}
 	var rows []Record
-	e = json.Unmarshal(data, &rows)
-	return rows, e
+	err := s.rpc(ctx, "receipt_documents", map[string]string{"p_owner": owner}, &rows)
+	return rows, err
 }
 func (s *Store) image(ctx context.Context, r Record) ([]byte, error) {
 	return s.request(ctx, "GET", "/storage/v1/object/authenticated/receipt-images/"+r.ImagePath, "", nil, MaxImageBytes)

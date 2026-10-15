@@ -72,6 +72,8 @@ export function ReceiptWorkspace() {
   }, [receipt?.id, receipt?.status]);
 
   async function upload() {
+    // Guard before file inspection, reservation, storage upload or paid work.
+    if (dirty && !window.confirm('Discard unsaved changes before uploading a receipt?')) return;
     const file = fileInput.current?.files?.[0];
     if (!file) throw new Error('Choose a receipt image first.');
     if (file.size > 5 * 1024 * 1024 || !['image/jpeg', 'image/png'].includes(file.type)) throw new Error('Choose a JPEG or PNG up to 5 MiB.');

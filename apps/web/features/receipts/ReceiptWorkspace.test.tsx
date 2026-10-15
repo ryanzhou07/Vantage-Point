@@ -75,4 +75,23 @@ describe('owner receipt review', () => {
     expect(vi.mocked(receiptRequest).mock.calls.some(([path]) => path.endsWith('/retry'))).toBe(false);
     expect(screen.getByRole('button', { name: 'Retry extraction (2 remaining)' })).toBeTruthy();
   });
+  it.each(['same-receipt.png', 'different-receipt.png'])('keeps unsaved receipt A when upload of %s is canceled before any request', async (filename) => {
+    vi.mocked(receiptRequest).mockImplementation(async (path) => path === '' ? { receipts: [fixture] } as never : fixture as never);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<ReceiptWorkspace />);
+    await waitFor(() => expect(screen.getAllByRole('option').length).toBe(2));
+    fireEvent.change(screen.getByLabelText('Recent drafts (latest 20)'), { target: { value: fixture.id } });
+    await screen.findByLabelText('Merchant');
+    fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Unsaved receipt A correction' } });
+    const before = vi.mocked(receiptRequest).mock.calls.length;
+    fireEvent.change(screen.getByLabelText('Receipt image'), { target: { files: [new File(['synthetic'], filename, { type: 'image/png' })] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and extract' }));
+    await waitFor(() => expect(confirm).toHaveBeenCalledOnce());
+    await waitFor(() => expect((screen.getByRole('button', { name: 'Upload and extract' }) as HTMLButtonElement).disabled).toBe(false));
+    expect(vi.mocked(receiptRequest).mock.calls.length).toBe(before);
+    expect((screen.getByLabelText('Merchant') as HTMLInputElement).value).toBe('Unsaved receipt A correction');
+    expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id);
+    expect(screen.getByText(/Unsaved changes/)).toBeTruthy();
+  });
+
 });
