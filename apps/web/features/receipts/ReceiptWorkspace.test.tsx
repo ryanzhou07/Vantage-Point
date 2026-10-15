@@ -94,4 +94,16 @@ describe('owner receipt review', () => {
     expect(screen.getByText(/Unsaved changes/)).toBeTruthy();
   });
 
+  it('shows recovered legacy fields as needing owner review without inventing a date or preview', async () => {
+    const recovered = { ...fixture, error_code: 'LEGACY_REVIEW_REQUIRED' };
+    vi.mocked(receiptRequest).mockImplementation(async (path) => path === '' ? { receipts: [recovered] } as never : recovered as never);
+    render(<ReceiptWorkspace />);
+    await waitFor(() => expect(screen.getAllByRole('option').length).toBe(2));
+    fireEvent.change(screen.getByLabelText('Recent drafts (latest 20)'), { target: { value: fixture.id } });
+    await screen.findByText('Review the date, split methods and item assignments before calculating this recovered draft.');
+    expect((screen.getByLabelText('Receipt date (YYYY-MM-DD)') as HTMLInputElement).value).toBe('');
+    expect(screen.queryByRole('heading', { name: 'Saved draft split preview' })).toBeNull();
+    expect((screen.getByLabelText('Merchant') as HTMLInputElement).value).toBe('Synthetic cafe');
+  });
+
 });

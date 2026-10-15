@@ -104,6 +104,8 @@ try:
         assert request(api + '/api/v1/receipts/' + rid, owner)[1]['preview'] == record['preview'], 'preview not persisted'
         bad = {**draft, 'total_minor': 1}
         assert request(api + '/api/v1/receipts/' + rid + '/review', owner, {'version': record['version'], 'draft': bad, 'calculate': True})[0] == 422, 'unreconciled preview accepted'
+        code, saved_draft, _ = request(api + '/api/v1/receipts/' + rid + '/review', owner, {'version': record['version'], 'draft': draft, 'calculate': False})
+        assert code == 200 and saved_draft['preview'] is None, 'Save-draft null preview did not persist'
         print('Receipt integration passed: private upload/image, real two-user Auth/RLS, durable fake worker, hash deduplication, concurrent 200/409, integer preview persistence and invalid-input rejection.')
 finally:
     for process in processes:
