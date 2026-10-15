@@ -37,6 +37,10 @@ export function DashboardNavigation() {
           </ul>
         </div>
       ))}
+
+      <Link href="/dashboard/settings" aria-current={pathname === '/dashboard/settings' ? 'page' : undefined} className={linkClass('/dashboard/settings')}>
+        Settings
+      </Link>
     </nav>
   );
 }

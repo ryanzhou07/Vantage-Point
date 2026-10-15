@@ -6,6 +6,7 @@ import { authClient } from '../../lib/auth/client';
 import { loadProfile, signOut } from '../../lib/auth/flows';
 import { createDashboardSession, type DashboardSession } from './session';
 import { DashboardNavigation } from './dashboard-navigation';
+import { DashboardProfileContext } from './profile-context';
 
 const actionClass = 'inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:opacity-50';
 
@@ -104,7 +105,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </div>
         </aside>
         <main id="dashboard-content" tabIndex={-1} className="min-w-0 rounded-2xl outline-none" key={session.profile.id}>
-          {children}
+          <DashboardProfileContext.Provider value={session.profile}>
+            {children}
+          </DashboardProfileContext.Provider>
         </main>
       </div>
     </div>
