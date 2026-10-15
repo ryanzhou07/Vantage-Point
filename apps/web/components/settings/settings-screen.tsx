@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { NavigationIcon, type NavigationIconName } from '../ui/NavigationIcon';
 import { useDashboardProfile } from '../dashboard/profile-context';
 import { FutureAction, PreviewField, SettingsCard } from './settings-parts';
 import './settings.css';
@@ -124,7 +125,7 @@ export function SettingsScreen() {
       <p id="settings-preview-note" className="settings-preview-note"><strong>Design preview.</strong> Explore the layout and try draft fields. Changes stay on this page only and are not saved or sent.</p>
       <div className="settings-layout">
         <nav aria-label="Settings sections" className="settings-section-nav">
-          {sections.map((item) => <button key={item.id} type="button" aria-current={section === item.id ? 'page' : undefined} aria-controls="settings-section" onClick={() => setSection(item.id)}>{item.label}<span aria-hidden="true">↗</span></button>)}
+          {sections.map((item) => <button key={item.id} type="button" aria-current={section === item.id ? 'page' : undefined} aria-controls="settings-section" onClick={() => setSection(item.id)}><NavigationIcon name={item.id as NavigationIconName} /><span>{item.label}</span></button>)}
         </nav>
         <section id="settings-section" aria-labelledby="settings-section-title" className="settings-section" key={section}>
           <header className="settings-section-header"><h2 id="settings-section-title">{current.label}</h2><p>{current.description}</p></header>

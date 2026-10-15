@@ -1,0 +1,29 @@
+.vp-dashboard-navigation { display: flex; flex-direction: column; gap: 18px; min-height: 100%; padding: 8px 12px 16px; color: #535550; }
+.vp-nav-row { display: flex; align-items: center; gap: 10px; min-height: 40px; width: 100%; padding: 9px 11px; border-radius: 6px; font-size: 13px; line-height: 1.5; font-weight: 500; text-decoration: none; text-align: left; cursor: pointer; }
+.vp-nav-row:hover { background: #e9e9e5; color: #20231f; }
+.vp-nav-row[aria-current] { background: #e3e5df; color: #20231f; font-weight: 600; }
+.vp-nav-row:focus-visible { outline: 2px solid #2877ac; outline-offset: 2px; }
+.vp-nav-icon { flex-shrink: 0; }
+.vp-nav-section { display: grid; gap: 8px; }
+.vp-nav-caption { padding: 0 11px; margin-bottom: 3px; font-size: 10px; letter-spacing: .1em; font-weight: 600; color: #72756d; }
+.vp-nav-group { border-radius: 8px; }
+.vp-nav-group.is-expanded { background: #eeefeb; }
+.vp-nav-parent { color: #353931; font-weight: 600; }
+.vp-nav-chevron { margin-left: auto; flex-shrink: 0; }
+.vp-nav-chevron.is-expanded { transform: rotate(90deg); }
+.vp-nav-children { padding: 2px 7px 7px 28px; }
+.vp-nav-children[hidden] { display: none; }
+.vp-nav-child { padding: 8px 10px; min-height: 38px; font-size: 12px; }
+.vp-nav-footer { margin-top: auto; padding-top: 16px; border-top: 1px solid #dedfd8; }
+.vp-dashboard-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: calc(100svh - 90px); }
+.vp-dashboard-sidebar { background: #f5f5f1; border-right: 1px solid #dedfd8; }
+.vp-dashboard-nav-container { height: calc(100svh - 90px); position: sticky; top: 0; padding-top: 16px; overflow-y: auto; }
+.vp-dashboard-content { padding: 36px; min-width: 0; background: white; }
+@media (max-width: 1023px) {
+  .vp-dashboard-layout { grid-template-columns: minmax(0, 1fr); }
+  .vp-dashboard-sidebar { border-right: 0; border-bottom: 1px solid #dedfd8; padding: 12px 20px; }
+  .vp-dashboard-nav-container { position: static; height: auto; padding-top: 12px; overflow-y: visible; }
+  .vp-dashboard-navigation { padding: 0 0 6px; }
+  .vp-nav-footer { margin-top: 4px; }
+  .vp-dashboard-content { padding: 24px 20px; }
+}

@@ -82,10 +82,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-white text-slate-900">
       <a href="#dashboard-content" className="sr-only rounded-xl bg-white p-4 focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50">Skip to content</a>
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-5 sm:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-5 sm:px-8">
           <Link href="/dashboard" className="text-xl font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-teal-700">Vantage-Point<span className="ml-1 text-teal-700">.</span></Link>
           <div className="flex min-w-0 flex-wrap items-center gap-3">
             <p className="max-w-60 break-words text-sm text-slate-600">{session.profile.display_name || session.profile.email || 'Vantage-Point user'}</p>
@@ -95,16 +95,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         {actionError && <p role="alert" className="mx-auto max-w-7xl px-5 pb-4 text-red-800">{actionError}</p>}
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-6 p-5 sm:p-8 lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <aside className="self-start rounded-2xl border border-slate-200 bg-white p-3">
+      <div className="vp-dashboard-layout">
+        <aside className="vp-dashboard-sidebar">
           <button className={`${actionClass} w-full lg:hidden`} aria-expanded={navigationOpen} aria-controls="dashboard-navigation" onClick={() => setNavigationOpen(!navigationOpen)}>Browse dashboard</button>
-          <div id="dashboard-navigation" className={`${navigationOpen ? 'block' : 'hidden'} pt-3 lg:block lg:pt-0`} onClick={(event) => {
+          <div id="dashboard-navigation" className={`vp-dashboard-nav-container ${navigationOpen ? 'block' : 'hidden'} lg:block`} onClick={(event) => {
             if ((event.target as HTMLElement).closest('a')) setNavigationOpen(false);
           }}>
             <DashboardNavigation />
           </div>
         </aside>
-        <main id="dashboard-content" tabIndex={-1} className="min-w-0 rounded-2xl outline-none" key={session.profile.id}>
+        <main id="dashboard-content" tabIndex={-1} className="vp-dashboard-content outline-none" key={session.profile.id}>
           <DashboardProfileContext.Provider value={session.profile}>
             {children}
           </DashboardProfileContext.Provider>
