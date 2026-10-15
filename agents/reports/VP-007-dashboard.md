@@ -24,3 +24,9 @@ Four new behavior tests cover real profile rendering and discarded draft inputs,
 ## Outstanding gates / limitations
 
 Foundation must implement only the assigned fixed callback destination and contract update, then rerun relevant checks. Real Google login/reload/sign-out smoke is not performed by this package. No browser automation capability or installed Playwright was available to this agent, so desktop/mobile rendered visual inspection remains outstanding; CSS breakpoints and jsdom interaction tests do not substitute for it. Hosted exact-head CI and separate Integration/Review approval must follow the combined implementation. No backend/database change, so database/financial tests are not applicable to this package.
+
+## Owner visual correction — 2026-10-15
+
+The owner said the Settings section looks good and requested black border lines in both navigation areas. Added near-black outer rail, Banking/Receipt group separators and a Settings link boundary in Dashboard navigation. Settings navigation now has a near-black outer rail and individually bordered section buttons at desktop and mobile breakpoints. Existing focus outlines/active fills remain unchanged. No route, auth, data or business logic changed.
+
+Local verification on this correction: pinned `pnpm lint`, `pnpm typecheck`, `pnpm test` (7 files, 49 tests) and `git diff --check` all passed. No new implementation-mirroring test was added for a reversible style-only correction. Live dev preview3000 is preserved; production build is left to isolated hosted CI to avoid overwriting live `.next` artifacts. Browser visual inspection remains unavailable (no enabled browser surfaces); owner can inspect the updated live preview. Foundation callback handoff was completed separately at `a6117f7` before this correction.

@@ -14,13 +14,13 @@ export function DashboardNavigation() {
   }
 
   return (
-    <nav aria-label="Dashboard navigation" className="space-y-5">
+    <nav aria-label="Dashboard navigation" className="space-y-5 rounded-xl border border-slate-950 p-2">
       <Link href="/dashboard" aria-current={pathname === '/dashboard' ? 'page' : undefined} className={linkClass('/dashboard')}>
         Overview
       </Link>
 
       {(['Banking', 'Receipt splitting'] as const).map((group) => (
-        <div key={group}>
+        <div key={group} className="border-t border-slate-950 pt-5">
           <p className="mb-2 px-4 text-xs font-semibold uppercase tracking-widest text-slate-500">{group}</p>
           <ul className="space-y-1">
             {destinations.filter((destination) => destination.group === group).map((destination) => {
@@ -38,7 +38,7 @@ export function DashboardNavigation() {
         </div>
       ))}
 
-      <Link href="/dashboard/settings" aria-current={pathname === '/dashboard/settings' ? 'page' : undefined} className={linkClass('/dashboard/settings')}>
+      <Link href="/dashboard/settings" aria-current={pathname === '/dashboard/settings' ? 'page' : undefined} className={`${linkClass('/dashboard/settings')} border border-slate-950`}>
         Settings
       </Link>
     </nav>
