@@ -18,7 +18,7 @@ export function useAuthCallback() {
       () => {
         if (!active) return;
         window.history.replaceState(null, '', '/auth/callback');
-        window.location.replace('/');
+        window.location.replace('/dashboard');
       },
       () => {
         if (!active) return;

@@ -32,7 +32,7 @@ export async function signIn(client: SupabaseClient, origin: string) {
 export async function completeCallback(client: SupabaseClient, location: string) {
   const url = new URL(location);
 
-  // Destination is always /; no caller-controlled redirect is accepted.
+  // Destination is always /dashboard; no caller-controlled redirect is accepted.
   if (url.searchParams.has('error') || url.searchParams.has('error_description')) {
     throw new Error('Google sign-in was canceled or could not complete. Please try again.');
   }
