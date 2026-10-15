@@ -17,7 +17,8 @@
     "backend:check": "bash scripts/check-backend.sh",
     "security:secrets": "bash scripts/check-secrets.sh",
     "security:dependencies": "bash scripts/check-dependencies.sh",
-    "auth:integration": "python3 scripts/test-auth-integration.py"
+    "auth:integration": "python3 scripts/test-auth-integration.py",
+    "receipt:integration": "python3 scripts/test-receipt-integration.py"
   },
   "devDependencies": {
     "supabase": "2.120.0"

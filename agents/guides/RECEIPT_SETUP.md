@@ -1,0 +1,34 @@
+# Gemini 3.5 Flash-Lite Receipt setup
+
+The owner approved **gemini-3.5-flash-lite** on 2026-10-15 after the originally requested 2.5 model returned HTTP404. The current model's full-adapter synthetic-image smoke passed: two items, USD subtotal1200, tax96, tip240, total1536 cents. This confirms the saved development key/model/image/structured-output path, not production receipt accuracy. No automatic fallback is enabled.
+
+1. Open [Google AI Studio API keys](https://aistudio.google.com/api-keys) and create/select a Google Cloud project you control. Follow [Google's API key setup](https://ai.google.dev/gemini-api/docs/api-key). Check project quotas and billing before authorizing live requests; student consumer subscriptions do not automatically prove API entitlement.
+2. Confirm [Gemini 3.5 Flash-Lite](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite) access in that project. It supports image input and structured output. The adapter uses the empirically verified GenerateContent `responseMimeType` + typed `responseSchema` contract; newer `responseFormat`/`responseJsonSchema` fields returned HTTP400 in development. The owner must approve any future model change. Never silently switch models or use paid AWS fallback.
+3. The coordinator created a stable private file at `/Users/ryanzhou/Documents/Projects 2026/Personal/Vantage Point Finance/.env.receipts.local` (primary checkout root, outside disposable worktrees, Git ignored, chmod600). Open it in your editor and fill in `GEMINI_API_KEY`; keep `RECEIPT_VISION_PROVIDER=gemini`. Never paste credentials into chat, command arguments, screenshots or Git, or prefix them with NEXT_PUBLIC_. Do not put the file in a worktree. The helper below finds this primary root automatically and parses allowlisted values as data; it does not execute `source`, shell substitutions or expansions.
+4. After the owner confirms the key is ready, run this from **any** terminal directory:
+
+   ```sh
+   python3 "/Users/ryanzhou/Documents/Projects 2026/Personal/Vantage Point Finance/.worktrees/vp-008/scripts/receipt-command.py" smoke --live-synthetic
+   ```
+
+   This sends exactly one embedded synthetic receipt image (no user purchase data), may consume quota, prints only success or normalized safe errors, and never prints the key/provider body. No manual exports or cwd changes are required. `--live-synthetic` is mandatory opt-in; without the flag/key no request is sent. The stable file overrides matching inherited environment values, including an empty key, so stale shell credentials cannot masquerade as newly saved configuration. `VISION_ACCESS_REQUIRED` means verify the project/key/permissions. `VISION_MODEL_UNAVAILABLE (HTTP 404, NOT_FOUND)` means the selected model was unavailable; this does not prove that the key is valid. Confirm project/model eligibility and escalate to the owner if the selected model is unavailable. HTTP400 request rejection is distinct from HTTP429 quota/rate rejection; only whitelisted public status enums are printed. A successful result checks two lines, USD subtotal1200, tax96, tip240, total1536 cents. This is distinct from fake CI.
+
+   If working outside this owner's checkout, use `python3 /your/checkout/scripts/receipt-command.py smoke --live-synthetic`; the helper still resolves that repository's primary root. Alternatively, with GEMINI_API_KEY already present in the private process environment, run `RECEIPT_LIVE_SMOKE=synthetic-only go run ./cmd/receipt-smoke` from services/backend.
+
+## Run the application components
+
+Apply fresh migrations only to a disposable test database first. For an existing development database, use your normal reviewed forward-migration process; **do not reset the owner's active stack**. Supabase Storage must be running with the new private bucket/policies. Service-role credentials below remain backend-only.
+
+API environment: existing SUPABASE_URL, SUPABASE_ANON_KEY, WEB_ORIGIN and optional API_PORT, plus SUPABASE_SERVICE_ROLE_KEY. API continues to run without Receipt configuration but Receipt routes return a setup-required state.
+
+Worker environment: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RECEIPT_VISION_PROVIDER=gemini, GEMINI_API_KEY. Run `python3 /path/to/checkout/scripts/receipt-command.py worker` from any directory, after adding SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to the same private file (or supplying them in the backend environment). The helper never starts the frontend/API/database, modifies configuration, or provisions infrastructure. Alternatively, from services/backend with the environment already loaded: `go run ./cmd/receipt-worker`. This is the existing planned Receipt worker process, not a new microservice. It polls persistent jobs, one at a time, and handles SIGINT/SIGTERM. Run the existing Go API and Next frontend separately/through VP-006; navigate `/dashboard/receipts`.
+
+For **synthetic development/test only**, use RECEIPT_VISION_PROVIDER=fake plus RECEIPT_ALLOW_FAKE=development-test-only. This does not test extraction/access and never silently substitutes for Gemini. The fixture merchant visibly says fake provider.
+
+## Local verification without touching the live preview
+
+Use a dedicated Supabase project `vantage-point-receipt-tests` on API59321/DB59322 (copy config and migrations into an ignored test workdir and change project/ports), or CI's fresh disposable stack. Point RECEIPT_TEST_WORKDIR to that workdir and run `pnpm receipt:integration`. The script rejects the owner's normal local stack unless running in CI. It creates/deletes only synthetic users/images, builds isolated API/worker processes on59080, uses explicit fake provider, and never resets data. `supabase/tests/020_receipt_drafts.sql` is transactional and checks private RLS/grants, lease fencing, deduplication and version conflicts. Existing CI applies migrations from zero, runs SQL assertions then real two-user Receipt integration.
+
+Required checks: frontend lint/typecheck/tests/build; Go format/vet/race tests/build; disposable migration/SQL/Auth+Receipt integration; exact-head CI; separate review. Manual desktop/narrow/keyboard review remains separate evidence. The recorded real synthetic smoke is separate from fake CI and must be rerun only when provider changes justify a new authorized request.
+
+Provider references used: [structured output](https://ai.google.dev/gemini-api/docs/generate-content/structured-output), [image understanding](https://ai.google.dev/gemini-api/docs/generate-content/image-understanding). JSON validity alone is not financial correctness: all extraction remains an owner-reviewed proposal.
