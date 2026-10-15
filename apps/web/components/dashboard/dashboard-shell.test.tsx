@@ -107,3 +107,18 @@ it('reports sign-out failure and allows a retry', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
   await waitFor(() => expect(mocks.signOut).toHaveBeenCalledTimes(2));
 });
+
+it('supports keyboard-focusable grouped navigation and collapses only the selected group', async () => {
+  renderShell();
+  await screen.findByText('Owner A');
+  const banking = screen.getByRole('button', { name: 'Banking' });
+  banking.focus();
+  expect(document.activeElement).toBe(banking);
+  expect(banking.getAttribute('aria-expanded')).toBe('true');
+  fireEvent.click(banking);
+  expect(banking.getAttribute('aria-expanded')).toBe('false');
+  expect(screen.queryByRole('link', { name: 'Accounts & balances' })).toBeNull();
+  expect(screen.getByRole('link', { name: 'Receipt history' })).toBeTruthy();
+  fireEvent.click(banking);
+  expect(screen.getByRole('link', { name: 'Accounts & balances' }).getAttribute('href')).toBe('/dashboard/accounts');
+});
