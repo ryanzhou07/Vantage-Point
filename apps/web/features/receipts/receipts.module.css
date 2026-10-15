@@ -1,0 +1,26 @@
+.workspace { display:grid;gap:1.5rem;min-width:0;color:var(--vp-ink,#172022); }
+.workspace h1 { font-size:clamp(1.7rem,4vw,2.5rem);font-weight:650;line-height:1.15;margin:.5rem 0 1rem; }
+.workspace h2,.workspace h3 { font-size:1.2rem;font-weight:650;margin:.5rem 0; }
+.workspace p { color:#515a5d;line-height:1.6;margin:.6rem 0; }
+.eyebrow { font-size:.75rem;letter-spacing:.12em; }
+.card,.preview { border:1px solid #c9d0ce;border-radius:1rem;background:white;padding:clamp(1rem,3vw,1.75rem);display:grid;gap:1rem;min-width:0; }
+.editor { display:grid;gap:1.25rem;border:0;padding:1rem 0;min-width:0; }
+.editor>legend { font-size:1.4rem;font-weight:650; }
+.fields,.line { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,11rem),1fr));gap:1rem;min-width:0; }
+.line { border:1px solid #c9d0ce;border-radius:.75rem;padding:1rem;align-items:end; }
+.line legend { padding:0 .4rem;font-weight:600; }
+.workspace label { display:grid;gap:.4rem;font-size:.875rem;min-width:0; }
+.workspace input,.workspace select { border:1px solid #737f7a;background:#fff;border-radius:.4rem;padding:.7rem;min-height:48px;max-width:100%;min-width:0;font:inherit;color:inherit; }
+.workspace input:focus-visible,.workspace select:focus-visible,.workspace a:focus-visible,.workspace summary:focus-visible { outline:3px solid #127967;outline-offset:3px; }
+.person { display:flex;align-items:end;gap:1rem;flex-wrap:wrap; }
+.check { display:flex!important;align-items:center;gap:.5rem!important;min-height:48px; }
+.check input { min-height:20px;width:20px; }
+.actions { display:flex;flex-wrap:wrap;gap:1rem;align-items:center;justify-content:space-between; }
+.file { max-width:38rem; }
+.table { overflow:auto; }
+.table table { width:100%;border-collapse:collapse;font-size:.9rem; }
+.table th,.table td { padding:.8rem;text-align:left;border-bottom:1px solid #d5dad7;white-space:nowrap; }
+.table caption { text-align:left;padding:.5rem 0; }
+.proposal { max-height:18rem;overflow:auto;font-size:.8rem;white-space:pre-wrap;overflow-wrap:anywhere; }
+.workspace a { color:#086353;text-decoration:underline; }
+@media(max-width:520px) { .person { display:grid; }.actions { align-items:stretch; }.actions>button { flex:1 1 100%; }.card { border-radius:.65rem; } }

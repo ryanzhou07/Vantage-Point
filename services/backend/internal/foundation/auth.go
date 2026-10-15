@@ -94,6 +94,15 @@ func fail(w http.ResponseWriter, status int, code, message string, id string) {
 	_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": code, "message": message, "request_id": id}})
 }
 func (a *API) Protect(next http.Handler) http.Handler {
+	return a.ProtectMethods(next, "GET")
+}
+
+// ProtectMethods retains verified identity while allowing an explicit domain method set.
+func (a *API) ProtectMethods(next http.Handler, methods ...string) http.Handler {
+	allowed := map[string]bool{}
+	for _, method := range methods {
+		allowed[method] = true
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b := make([]byte, 16)
 		_, _ = rand.Read(b)
@@ -110,13 +119,20 @@ func (a *API) Protect(next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Origin", a.origin)
 		}
 		if r.Method == "OPTIONS" {
-			w.Header().Set("Access-Control-Allow-Methods", "GET")
+			w.Header().Set("Access-Control-Allow-Methods", strings.Join(methods, ", "))
 			w.Header().Set("Access-Control-Allow-Headers", "Authorization")
+			if allowed["POST"] {
+				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+			}
 			w.WriteHeader(204)
 			return
 		}
-		if r.Method != "GET" {
-			fail(w, 405, "METHOD_NOT_ALLOWED", "Use GET.", id)
+		if !allowed[r.Method] {
+			message := "Use GET."
+			if len(methods) != 1 || methods[0] != "GET" {
+				message = "Use an allowed method."
+			}
+			fail(w, 405, "METHOD_NOT_ALLOWED", message, id)
 			return
 		}
 		if r.URL.RawQuery != "" || r.Header.Get("X-User-ID") != "" {
