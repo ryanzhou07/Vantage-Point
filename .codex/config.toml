@@ -1,0 +1,5 @@
+# Use a lower-cost default for spawned task agents in this project.
+# Explicit task/session overrides take precedence when requested.
+[agents]
+default_subagent_model = "gpt-5.6-sol"
+default_subagent_reasoning_effort = "low"
