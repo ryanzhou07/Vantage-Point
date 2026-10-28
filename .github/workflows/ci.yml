@@ -66,6 +66,9 @@ jobs:
       - run: pnpm db:start
       - run: pnpm db:validate
       - run: pnpm auth:integration
+      - run: python3 scripts/test-receipt-config.py
+      - run: bash scripts/test-receipt-migration.sh
+      - run: pnpm receipt:integration
       - if: always()
         run: pnpm db:stop
   security:
