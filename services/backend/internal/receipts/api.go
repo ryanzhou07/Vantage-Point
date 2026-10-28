@@ -11,6 +11,7 @@ import (
 	_ "image/png"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"sync"
@@ -123,6 +124,10 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		apiError(w, 401, "UNAUTHENTICATED", "Sign in to continue.")
 		return
 	}
+	if strings.HasPrefix(r.URL.Path, "/api/v1/receivables") {
+		a.receivables(w, r, owner)
+		return
+	}
 	a.serve(w, r, owner)
 }
 
@@ -154,7 +159,20 @@ func (a *API) serve(w http.ResponseWriter, r *http.Request, owner string) {
 		}
 		return
 	}
-	if path == "/summary" && r.Method == "GET" {
+	if strings.HasPrefix(path, "/summary") && r.Method == "GET" {
+		// Foundation rejects query strings, so the page limit and cursor travel as path segments.
+		seg := strings.Split(strings.Trim(path, "/"), "/")
+		if seg[0] != "summary" || len(seg) > 3 {
+			apiError(w, 404, "NOT_FOUND", "Receipt route not found.")
+			return
+		}
+		if len(seg) > 1 {
+			q := url.Values{"limit": {seg[1]}}
+			if len(seg) == 3 {
+				q.Set("cursor", seg[2])
+			}
+			r.URL.RawQuery = q.Encode()
+		}
 		a.summary(w, r, owner)
 		return
 	}
@@ -205,6 +223,19 @@ func (a *API) serve(w http.ResponseWriter, r *http.Request, owner string) {
 	switch parts[1] {
 	case "review":
 		a.save(w, r, owner, id)
+	case "finalize":
+		var in struct {
+			Version int64 `json:"version"`
+		}
+		if !readJSON(w, r, &in) {
+			return
+		}
+		var result Record
+		if e = a.Store.rpc(r.Context(), "receipt_finalize", map[string]any{"p_owner": owner, "p_id": id, "p_version": in.Version}, &result); e != nil {
+			storeError(w, e)
+			return
+		}
+		jsonReply(w, 200, result)
 	case "retry":
 		var in struct {
 			Version int64 `json:"version"`

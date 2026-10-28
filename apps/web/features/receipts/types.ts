@@ -10,7 +10,7 @@ export type Preview = {
   shares: { participant_id: string; items_minor: number; tax_minor: number; tip_minor: number; total_minor: number }[];
 };
 export type Receipt = {
-  id: string; status: 'DRAFT' | 'PROCESSING' | 'NEEDS_REVIEW' | 'PROCESSING_FAILED'; version: number;
+  id: string; status: 'DRAFT' | 'PROCESSING' | 'NEEDS_REVIEW' | 'PROCESSING_FAILED' | 'FINALIZED'; version: number;
   proposal: Proposal | null; draft: Draft | null; preview: Preview | null; error_code: string | null; retries: number; created_at: string;
 };
 export function initialDraft(receipt: Receipt): Draft | null {

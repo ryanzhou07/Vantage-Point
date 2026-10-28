@@ -44,3 +44,9 @@ An AWS Bedrock multimodal or Textract adapter can implement Extractor and map it
 ## Delete (VP-015c)
 
 `DELETE /api/v1/receipts/{uuid}` -> 200 `{deleted:true}`. Owner-scoped (others get 404). Removes the receipt and, via cascade, its items, participants, claims, sessions and events, then deletes the private image best effort. A PROCESSING receipt returns 409 `RECEIPT_NOT_REVIEWABLE`. Limit 10/min/owner. Deletions still count toward the 20/day upload quota (`receipt_deletions`).
+
+## Finalize and receivables (VP-019)
+
+- `POST /api/v1/receipts/{uuid}/finalize {version}` -> 200 receipt (status `FINALIZED`). One DB function under the receipt lock: needs NEEDS_REVIEW, matching version (409 `RECEIPT_CONFLICT`), every item claimed and a current saved preview (422 `RECEIPT_INVALID_REVIEW`; every join, claim and edit clears the preview). Creates one `OWED` receivable per non-owner participant with a positive share (items + tax + tip), invalidates the active share session, writes a `RECEIPT_FINALIZED` event. Finalized receipts cannot be edited, claimed or deleted (409 `RECEIPT_NOT_REVIEWABLE`).
+- `GET /api/v1/receivables` -> `{receivables:[{id,receipt_id,merchant,receipt_date,participant_id,participant_name,amount_owed_minor,currency,status,paid_at,created_at}],outstanding_minor}` (owner only, max 500, unpaid first).
+- `POST /api/v1/receivables/{uuid}/paid {paid:boolean}` -> sets `PAID`/`OWED` and `paid_at`; writes `RECEIVABLE_PAID`/`RECEIVABLE_UNPAID` events. Other owners get 404.

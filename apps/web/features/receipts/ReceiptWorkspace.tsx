@@ -141,6 +141,13 @@ export function ReceiptWorkspace() {
     setNotice('Receipt confirmed. Share the QR code or link so people can claim their items.');
   }
 
+  async function finalize() {
+    if (!receipt || !window.confirm('Finalize this receipt? Everyone\'s amount becomes a receivable, the share link stops working, and the receipt can no longer be edited.')) return;
+    accept(await receiptRequest<Receipt>(`/${receipt.id}/finalize`, postJSON({ version: receipt.version })));
+    window.dispatchEvent(new Event('receipts:changed'));
+    setNotice('Receipt finalized. Track who has paid under Money owed to you.');
+  }
+
   async function open(id: string) {
     if (dirty && !window.confirm('Discard unsaved changes and load this receipt?')) return;
     accept(await receiptRequest<Receipt>(`/${id}`));
@@ -162,7 +169,7 @@ export function ReceiptWorkspace() {
       <label className={styles.file}>Recent drafts (latest 20)<select value={receipt?.id ?? ''} disabled={busy} onChange={(event) => { if (event.target.value) void action(() => open(event.target.value)); }}><option value="">Choose a receipt</option>{receipts.map((value) => <option key={value.id} value={value.id}>{value.draft?.merchant || value.proposal?.merchant || 'Receipt'} — {value.status.toLowerCase().replaceAll('_', ' ')} — {value.created_at.slice(0, 10)}</option>)}</select></label>
 
       {receipt && <section className={styles.card} aria-labelledby="current-receipt">
-        <div className={styles.actions}><h2 id="current-receipt">Current receipt</h2><Button variant="secondary" disabled={busy} onClick={() => void action(() => open(receipt.id))}>Reload receipt</Button><Button variant="secondary" disabled={busy || receipt.status === 'PROCESSING'} onClick={() => void action(remove)}>Delete receipt</Button></div>
+        <div className={styles.actions}><h2 id="current-receipt">Current receipt</h2><Button variant="secondary" disabled={busy} onClick={() => void action(() => open(receipt.id))}>Reload receipt</Button><Button variant="secondary" disabled={busy || receipt.status === 'PROCESSING' || receipt.status === 'FINALIZED'} onClick={() => void action(remove)}>Delete receipt</Button></div>
         {receipt.status === 'PROCESSING' && <Feedback>Processing image… You can return later; the job is saved.</Feedback>}
         {receipt.error_code === 'LEGACY_REVIEW_REQUIRED' && !receipt.preview && <Feedback>Review the date, split methods and item assignments before calculating this recovered draft.</Feedback>}
         {receipt.status === 'DRAFT' && <Feedback>The upload did not finish. Upload the same image again to resume safely.</Feedback>}
@@ -171,13 +178,17 @@ export function ReceiptWorkspace() {
         {receipt.proposal && <details><summary>Original extracted proposal</summary><pre className={styles.proposal}>{JSON.stringify(receipt.proposal, null, 2)}</pre></details>}
         {!imageURL && <Button variant="secondary" disabled={busy} onClick={() => void action(async () => { const image = await receiptImage(receipt.id); if (mounted.current) setImageURL(URL.createObjectURL(image)); })}>Load private receipt image</Button>}
         {imageURL && <a href={imageURL} target="_blank" rel="noreferrer">Open your selected image for comparison</a>}
-        {draft && (editing || !receipt.draft) && <>
+        {draft && receipt.status !== 'FINALIZED' && (editing || !receipt.draft) && <>
           <ReceiptEditor draft={draft} disabled={busy} onChange={(value) => { setDraft(value); setDirty(true); }} />
           {missing.length > 0
             ? <div className="vp-feedback vp-feedback--error" role="alert"><strong>Fix these before you can continue ({missing.length}):</strong><ul>{missing.map((line) => <li key={line}>{line}</li>)}</ul></div>
             : <Feedback>Everything is filled in. Confirm to move on to sharing.</Feedback>}
           {dirty && <Feedback>Unsaved changes. Confirm or save the draft to keep them.</Feedback>}
           <div className={styles.actions}><Button disabled={busy || missing.length > 0} onClick={() => void action(confirm)}>Confirm receipt and continue</Button><Button variant="secondary" disabled={busy} onClick={() => void action(() => save(false))}>Save draft</Button></div>
+        </>}
+        {draft && receipt.draft && receipt.status === 'FINALIZED' && <>
+          <Feedback>Finalized. This split is locked. Amounts owed to you are listed under Money owed to you.</Feedback>
+          {receipt.preview && <SplitPreview preview={receipt.preview} draft={draft} />}
         </>}
         {draft && receipt.draft && !editing && receipt.status === 'NEEDS_REVIEW' && <>
           <section className={styles.card} aria-labelledby="confirmed-receipt">
@@ -187,7 +198,9 @@ export function ReceiptWorkspace() {
             <div className={styles.actions}>
               <Button variant="secondary" disabled={busy} onClick={() => setEditing(true)}>Edit receipt details</Button>
               <Button disabled={busy || draft.items.some((line) => !line.participant_id)} onClick={() => void action(() => save(true))}>Calculate split preview</Button>
+              <Button disabled={busy || dirty || !receipt.preview} onClick={() => void action(finalize)}>Finalize receipt</Button>
             </div>
+            {!receipt.preview && <p>Calculate the split preview, then finalize. Any new join or claim clears the preview so you re-check the numbers.</p>}
             {draft.items.some((line) => !line.participant_id) && <p>The split preview unlocks once every item is claimed.</p>}
           </section>
           {!dirty && receipt.preview && <SplitPreview preview={receipt.preview} draft={draft} />}

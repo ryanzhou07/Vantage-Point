@@ -118,3 +118,27 @@ func TestOwnerDeleteIsOwnerScoped(t *testing.T) {
 		t.Fatal("delete did not use verified owner")
 	}
 }
+
+func TestFinalizeAndPaidRoutesAreOwnerScoped(t *testing.T) {
+	clock := time.Now()
+	a, db := sessionAPI(t, &clock)
+	r := httptest.NewRequest("POST", "/api/v1/receipts/"+rid+"/finalize", strings.NewReader(`{"version":4}`))
+	r.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	a.serve(w, r, ownerB)
+	if w.Code != 404 {
+		t.Fatal("cross-owner finalize", w.Code)
+	}
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest("POST", "/api/v1/receipts/"+rid+"/finalize", strings.NewReader(`{"version":4}`))
+	r.Header.Set("Content-Type", "application/json")
+	a.serve(w, r, ownerA)
+	if w.Code != 200 || !strings.Contains(strings.Join(db.bodies, ""), `"p_version":4`) {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	w = httptest.NewRecorder()
+	a.receivables(w, httptest.NewRequest("POST", "/api/v1/receivables/not-a-uuid/paid", strings.NewReader(`{"paid":true}`)), ownerA)
+	if w.Code != 404 {
+		t.Fatal("bad receivable id", w.Code)
+	}
+}
