@@ -104,3 +104,17 @@ func TestOpenJoinByNameAndClaimConflictAndExpiry(t *testing.T) {
 		t.Fatal("claim accepted after expiry", c)
 	}
 }
+
+func TestOwnerDeleteIsOwnerScoped(t *testing.T) {
+	clock := time.Now()
+	a, db := sessionAPI(t, &clock)
+	if code, _ := call(a, ownerB, "DELETE", ""); code != 404 {
+		t.Fatal("cross-owner delete", code)
+	}
+	if code, out := call(a, ownerA, "DELETE", ""); code != 200 || out["deleted"] != true {
+		t.Fatal(code, out)
+	}
+	if !strings.Contains(strings.Join(db.bodies, ""), `"p_owner":"`+ownerA+`"`) {
+		t.Fatal("delete did not use verified owner")
+	}
+}

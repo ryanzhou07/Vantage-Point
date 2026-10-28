@@ -101,4 +101,20 @@ describe('owner receipt review', () => {
     expect((screen.getByLabelText('Merchant') as HTMLInputElement).value).toBe('Synthetic cafe');
   });
 
+
+  it('deletes the open receipt after confirmation and clears it from the page', async () => {
+    vi.mocked(receiptRequest).mockImplementation(async (path, init) => {
+      if (path === '') return { receipts: [fixture] } as never;
+      if (init?.method === 'DELETE') return { deleted: true } as never;
+      return fixture as never;
+    });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<ReceiptWorkspace />);
+    await waitFor(() => expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete receipt' }));
+    await screen.findByText('Receipt deleted.');
+    expect(vi.mocked(receiptRequest)).toHaveBeenCalledWith(`/${fixture.id}`, { method: 'DELETE' });
+    expect(screen.queryByRole('button', { name: 'Delete receipt' })).toBeNull();
+    expect(localStorage.getItem('vp-active-receipt')).toBeNull();
+  });
 });

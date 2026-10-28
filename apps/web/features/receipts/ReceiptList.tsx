@@ -26,6 +26,12 @@ export function ReceiptList() {
   const mounted = useRef(true);
 
   useEffect(() => {
+    const refresh = () => setAttempt((n) => n + 1);
+    window.addEventListener('receipts:changed', refresh);
+    return () => window.removeEventListener('receipts:changed', refresh);
+  }, []);
+
+  useEffect(() => {
     mounted.current = true;
     const controller = new AbortController();
     receiptRequest<Page>('/summary?limit=10', { signal: controller.signal })

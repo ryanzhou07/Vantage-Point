@@ -115,6 +115,18 @@ export function ReceiptWorkspace() {
     } catch { /* next trigger retries */ }
   }
 
+  async function remove() {
+    if (!receipt || !window.confirm('Delete this receipt, its image and all claims? This cannot be undone.')) return;
+    const id = receipt.id;
+    await receiptRequest<{ deleted: boolean }>(`/${id}`, { method: 'DELETE' });
+    if (!mounted.current) return;
+    try { if (localStorage.getItem(ACTIVE_KEY) === id) localStorage.removeItem(ACTIVE_KEY); } catch { /* ignore */ }
+    setReceipt(null); setDraft(null); setDirty(false); setImageURL('');
+    setReceipts((current) => current.filter((entry) => entry.id !== id));
+    window.dispatchEvent(new Event('receipts:changed'));
+    setNotice('Receipt deleted.');
+  }
+
   async function open(id: string) {
     if (dirty && !window.confirm('Discard unsaved changes and load this receipt?')) return;
     accept(await receiptRequest<Receipt>(`/${id}`));
@@ -135,7 +147,7 @@ export function ReceiptWorkspace() {
       <label className={styles.file}>Recent drafts (latest 20)<select value={receipt?.id ?? ''} disabled={busy} onChange={(event) => { if (event.target.value) void action(() => open(event.target.value)); }}><option value="">Choose a receipt</option>{receipts.map((value) => <option key={value.id} value={value.id}>{value.draft?.merchant || value.proposal?.merchant || 'Receipt'} — {value.status.toLowerCase().replaceAll('_', ' ')} — {value.created_at.slice(0, 10)}</option>)}</select></label>
 
       {receipt && <section className={styles.card} aria-labelledby="current-receipt">
-        <div className={styles.actions}><h2 id="current-receipt">Current receipt</h2><Button variant="secondary" disabled={busy} onClick={() => void action(() => open(receipt.id))}>Reload receipt</Button></div>
+        <div className={styles.actions}><h2 id="current-receipt">Current receipt</h2><Button variant="secondary" disabled={busy} onClick={() => void action(() => open(receipt.id))}>Reload receipt</Button><Button variant="secondary" disabled={busy || receipt.status === 'PROCESSING'} onClick={() => void action(remove)}>Delete receipt</Button></div>
         {receipt.status === 'PROCESSING' && <Feedback>Processing image… You can return later; the job is saved.</Feedback>}
         {receipt.error_code === 'LEGACY_REVIEW_REQUIRED' && !receipt.preview && <Feedback>Review the date, split methods and item assignments before calculating this recovered draft.</Feedback>}
         {receipt.status === 'DRAFT' && <Feedback>The upload did not finish. Upload the same image again to resume safely.</Feedback>}

@@ -194,6 +194,10 @@ func (a *API) serve(w http.ResponseWriter, r *http.Request, owner string) {
 		_, _ = w.Write(data)
 		return
 	}
+	if len(parts) == 1 && r.Method == "DELETE" {
+		a.remove(w, r, owner, id)
+		return
+	}
 	if r.Method != "POST" || len(parts) != 2 {
 		apiError(w, 405, "METHOD_NOT_ALLOWED", "Use the documented receipt operation.")
 		return
@@ -410,4 +414,24 @@ func (a *API) save(w http.ResponseWriter, r *http.Request, owner, id string) {
 		return
 	}
 	jsonReply(w, 200, result)
+}
+
+// remove deletes the owner's receipt (rows first, then the private image, best effort).
+func (a *API) remove(w http.ResponseWriter, r *http.Request, owner, id string) {
+	if !a.allowKey("delete:"+owner, 10) {
+		w.Header().Set("Retry-After", "60")
+		apiError(w, 429, "RATE_LIMITED", "Too many deletes. Wait a minute.")
+		return
+	}
+	var out struct {
+		ImagePath string `json:"image_path"`
+	}
+	if e := a.Store.rpc(r.Context(), "receipt_delete", map[string]string{"p_owner": owner, "p_id": id}, &out); e != nil {
+		storeError(w, e)
+		return
+	}
+	if out.ImagePath != "" {
+		_, _ = a.Store.request(r.Context(), "DELETE", "/storage/v1/object/receipt-images/"+out.ImagePath, "", nil, 65536)
+	}
+	jsonReply(w, 200, map[string]bool{"deleted": true})
 }
