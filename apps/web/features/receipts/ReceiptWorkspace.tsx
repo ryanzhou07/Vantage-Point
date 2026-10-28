@@ -109,7 +109,7 @@ export function ReceiptWorkspace() {
 
   return (
     <div className={styles.workspace}>
-      <header><p className={styles.eyebrow}>RECEIPTS / OWNER DRAFT</p><h1>From receipt to shared total</h1><p>Upload, check the details, assign whole items, and preview everyone’s share.</p></header>
+      <header><p className={styles.eyebrow}>RECEIPTS / OWNER DRAFT</p><h1>From receipt to shared total</h1><p>Upload, check the details, share the link so people claim their own items, and preview everyone’s share.</p></header>
       <section className={styles.card} aria-labelledby="receipt-upload">
         <h2 id="receipt-upload">Attach a receipt</h2>
         <p>JPEG or PNG, up to 5 MiB and 16 megapixels. Your image stays private. Processing sends it to the configured vision provider.</p>
