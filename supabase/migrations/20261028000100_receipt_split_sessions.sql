@@ -78,7 +78,7 @@ begin
  select x.* into s from public.split_sessions x join public.receipts r on r.id=x.receipt_id
  where x.token_hash=p_hash and x.status='ACTIVE' and p_now<x.expires_at and r.status<>'FINALIZED';
  if not found then raise exception 'SESSION_INVALID' using errcode='P0001'; end if;
- return public.split_session_json(s)||jsonb_build_object('token_hash',s.token_hash);
+ return public.split_session_json(s)||jsonb_build_object('token_hash',s.token_hash,'owner_id',(select owner_id from public.receipts where id=s.receipt_id));
 end $$;
 
 revoke all on function public.split_session_json(public.split_sessions),public.split_session_open(uuid,uuid,text,timestamptz,integer),public.split_session_status(uuid,uuid),public.split_session_close(uuid,uuid,timestamptz),public.split_session_extend(uuid,uuid,timestamptz,integer),public.split_session_check(text,timestamptz) from public,anon,authenticated;

@@ -39,6 +39,7 @@ type Session struct {
 	ExpiresAt     string  `json:"expires_at"`
 	InvalidatedAt *string `json:"invalidated_at"`
 	TokenHash     string  `json:"token_hash,omitempty"`
+	OwnerID       string  `json:"owner_id,omitempty"` // server-side only; cleared before any response
 }
 
 func newToken() (token, hash string, e error) {
