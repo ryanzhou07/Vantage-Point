@@ -37,7 +37,7 @@ func (f *fakeDB) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fail("RECEIPT_NOT_FOUND")
 			return
 		}
-		_, _ = w.Write([]byte(`{"id":"` + rid + `"}`))
+		_, _ = w.Write([]byte(`{"id":"` + rid + `","draft":{"merchant":"Cafe","currency":"USD","participants":[{"id":"p1","name":"Sam","included":true},{"id":"p2","name":"Out","included":false}]}}`))
 		return
 	}
 	row := func() string {
@@ -45,7 +45,7 @@ func (f *fakeDB) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if f.active {
 			st = "ACTIVE"
 		}
-		return `{"id":"s1","receipt_id":"` + rid + `","status":"` + st + `","created_at":"x","expires_at":"` + f.exp.Format(time.RFC3339Nano) + `","invalidated_at":null,"token_hash":"` + f.hash + `"}`
+		return `{"id":"s1","receipt_id":"` + rid + `","status":"` + st + `","created_at":"x","expires_at":"` + f.exp.Format(time.RFC3339Nano) + `","invalidated_at":null,"owner_id":"` + ownerA + `","token_hash":"` + f.hash + `"}`
 	}
 	now, _ := time.Parse(time.RFC3339Nano, asString(in["p_now"]))
 	switch name {

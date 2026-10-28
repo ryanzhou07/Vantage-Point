@@ -7,6 +7,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -77,6 +78,17 @@ func (s *Store) CheckSession(ctx context.Context, token string, now time.Time) (
 	return out, nil
 }
 
+// broadcast sends a payload-free Realtime notification; clients refetch authoritative state.
+// Best effort and tightly bounded: a Realtime outage never fails the session operation.
+func (s *Store) broadcast(ctx context.Context, sessionID string) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	b, e := json.Marshal(map[string]any{"messages": []map[string]any{{"topic": "split:" + sessionID, "event": "session", "payload": map[string]any{}, "private": false}}})
+	if e == nil {
+		_, _ = s.request(ctx, "POST", "/realtime/v1/api/broadcast", "application/json", b, 4096)
+	}
+}
+
 // sessionView adds the backend-decided state: an ACTIVE session past expires_at reads EXPIRED.
 func (a *API) sessionView(s Session) map[string]any {
 	now := a.Now()
@@ -112,16 +124,23 @@ func (a *API) sessionRoute(w http.ResponseWriter, r *http.Request, owner, id str
 			storeError(w, e)
 			return
 		}
+		a.Store.broadcast(ctx, s.ID)
 		v := a.sessionView(s)
 		v["token"] = token // returned exactly once
 		jsonReply(w, 201, v)
 	case len(sub) == 1 && sub[0] == "close" && r.Method == "POST":
 		args["p_now"] = stamp(now)
 		s, e := a.Store.sessionOp(ctx, "split_session_close", args)
+		if e == nil {
+			a.Store.broadcast(ctx, s.ID)
+		}
 		a.sessionReply(w, 200, s, e)
 	case len(sub) == 1 && sub[0] == "extend" && r.Method == "POST":
 		args["p_now"], args["p_ttl_seconds"] = stamp(now), int(a.TTL.Seconds())
 		s, e := a.Store.sessionOp(ctx, "split_session_extend", args)
+		if e == nil {
+			a.Store.broadcast(ctx, s.ID)
+		}
 		a.sessionReply(w, 200, s, e)
 	default:
 		apiError(w, 405, "METHOD_NOT_ALLOWED", "Use the documented session operation.")
