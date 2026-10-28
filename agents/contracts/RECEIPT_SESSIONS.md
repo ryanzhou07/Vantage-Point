@@ -14,3 +14,9 @@ TTL: `SPLIT_SESSION_TTL` Go duration, default `5m`, allowed 1m-60m, invalid valu
 Participant gate (used by VP-015b): `Store.CheckSession(ctx, token, now)` -> session or `SESSION_INVALID` (401). Valid only while ACTIVE, `now < expires_at`, and receipt not FINALIZED. Expiry affects access only; receipt data is untouched.
 
 Schema: `public.split_sessions` (Receipt-owned), one ACTIVE row per receipt (partial unique index), owner-only SELECT RLS without `token_hash`, mutations only via service-role-only `split_session_*` functions that take the backend clock as `p_now`.
+
+## VP-015b extension
+
+- `POST /api/v1/split/session` (public, no Foundation auth): `{token, participant_id?}` -> `{state:"ACTIVE",server_time,session:{id,expires_at},receipt:{merchant,currency},participants:[{id,name}],participant?}`. Authorization is the share token itself (receipt-scoped, expires with the session); the chosen `participant_id` is a receipt-scoped name, never a canonical user. Re-POST is the authoritative refetch. 401 `SESSION_INVALID` = expired, closed or invalid; 404 `PARTICIPANT_NOT_FOUND`; 429 at 30/min per remote address. Exact `WEB_ORIGIN` CORS, no credentials, `no-store`, `no-referrer`. Owner identity and token hash are never returned.
+- Link format `<web origin>/split#<token>`; fragment is never sent to servers or stored.
+- Realtime: backend posts a payload-free broadcast to topic `split:<session id>` (event `session`) after create/close/extend, best effort with 2s bound. Clients refetch; on channel error they poll every 15s, and at the displayed expiry they refetch until the backend answers.

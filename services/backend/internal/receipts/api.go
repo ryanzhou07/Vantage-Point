@@ -28,12 +28,13 @@ type rateEntry struct {
 	count int
 }
 type API struct {
-	Store *Store
-	TTL   time.Duration
-	Now   func() time.Time // injected in tests; backend clock decides session expiry
-	slots chan struct{}
-	mu    sync.Mutex
-	rates map[string]rateEntry
+	Store  *Store
+	TTL    time.Duration
+	Origin string           // exact WEB_ORIGIN for the public join route's CORS
+	Now    func() time.Time // injected in tests; backend clock decides session expiry
+	slots  chan struct{}
+	mu     sync.Mutex
+	rates  map[string]rateEntry
 }
 
 func NewAPI(s *Store) *API {
@@ -136,6 +137,10 @@ func (a *API) serve(w http.ResponseWriter, r *http.Request, owner string) {
 		default:
 			apiError(w, 405, "METHOD_NOT_ALLOWED", "Use GET or POST.")
 		}
+		return
+	}
+	if path == "/summary" && r.Method == "GET" {
+		a.summary(w, r, owner)
 		return
 	}
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")

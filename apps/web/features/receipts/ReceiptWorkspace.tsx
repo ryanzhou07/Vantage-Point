@@ -6,6 +6,7 @@ import { Feedback } from '../../components/ui/Feedback';
 import { receiptRequest, receiptImage, postJSON } from './api';
 import { ReceiptEditor } from './ReceiptEditor';
 import { SplitPreview } from './SplitPreview';
+import { SplitSessionPanel } from './SplitSessionPanel';
 import { initialDraft, type Draft, type Receipt } from './types';
 import styles from './receipts.module.css';
 
@@ -126,6 +127,7 @@ export function ReceiptWorkspace() {
           {dirty && <Feedback>Unsaved changes. Save and calculate again to update the draft preview.</Feedback>}
           {!dirty && receipt.preview && <SplitPreview preview={receipt.preview} draft={draft} />}
         </>}
+        {receipt.status === 'NEEDS_REVIEW' && <SplitSessionPanel receiptId={receipt.id} />}
       </section>}
     </div>
   );
