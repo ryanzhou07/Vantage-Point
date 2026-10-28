@@ -7,13 +7,17 @@ import { receiptRequest, receiptImage, postJSON } from './api';
 import { ReceiptEditor } from './ReceiptEditor';
 import { SplitPreview } from './SplitPreview';
 import { SplitSessionPanel } from './SplitSessionPanel';
-import { initialDraft, money, type Draft, type Receipt } from './types';
+import { useDashboardProfile } from '../../components/dashboard/profile-context';
+import { initialDraft, money, withOwner, type Draft, type Receipt } from './types';
 import { missingFields } from './validate';
 import styles from './receipts.module.css';
 
 const ACTIVE_KEY = 'vp-active-receipt';
 
 export function ReceiptWorkspace() {
+  const profile = useDashboardProfile();
+  const ownerName = useRef<string | null>(null);
+  useEffect(() => { ownerName.current = profile ? (profile.display_name || profile.email || 'Me') : null; });
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -41,7 +45,7 @@ export function ReceiptWorkspace() {
         const target = list.find((entry) => entry.id === last) ?? list[0];
         if (!target) return;
         const value = await receiptRequest<Receipt>(`/${target.id}`, { signal: controller.signal });
-        if (mounted.current && !controller.signal.aborted) setReceipt((current) => { if (current) return current; setDraft(initialDraft(value)); return value; });
+        if (mounted.current && !controller.signal.aborted) setReceipt((current) => { if (current) return current; setDraft(withOwner(initialDraft(value), ownerName.current)); return value; });
       })
       .catch(() => { if (mounted.current && !controller.signal.aborted) setError('Your receipts could not be loaded. Refresh when the Receipt service is ready.'); });
     return () => { mounted.current = false; controller.abort(); };
@@ -56,7 +60,7 @@ export function ReceiptWorkspace() {
     if (!mounted.current) return;
     setReceipt(value);
     try { localStorage.setItem(ACTIVE_KEY, value.id); } catch { /* ignore */ }
-    setDraft(initialDraft(value));
+    setDraft(withOwner(initialDraft(value), ownerName.current));
     setDirty(false);
     setReceipts((current) => [value, ...current.filter((entry) => entry.id !== value.id)].slice(0, 20));
   }
@@ -170,7 +174,7 @@ export function ReceiptWorkspace() {
         {draft && (editing || !receipt.draft) && <>
           <ReceiptEditor draft={draft} disabled={busy} onChange={(value) => { setDraft(value); setDirty(true); }} />
           {missing.length > 0
-            ? <Feedback tone="error"><strong>Fix these before you can continue ({missing.length}):</strong><ul>{missing.map((line) => <li key={line}>{line}</li>)}</ul></Feedback>
+            ? <div className="vp-feedback vp-feedback--error" role="alert"><strong>Fix these before you can continue ({missing.length}):</strong><ul>{missing.map((line) => <li key={line}>{line}</li>)}</ul></div>
             : <Feedback>Everything is filled in. Confirm to move on to sharing.</Feedback>}
           {dirty && <Feedback>Unsaved changes. Confirm or save the draft to keep them.</Feedback>}
           <div className={styles.actions}><Button disabled={busy || missing.length > 0} onClick={() => void action(confirm)}>Confirm receipt and continue</Button><Button variant="secondary" disabled={busy} onClick={() => void action(() => save(false))}>Save draft</Button></div>

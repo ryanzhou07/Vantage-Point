@@ -1,5 +1,5 @@
 export type Item = { id: string; name: string; quantity: number; amount_minor: number; participant_id: string };
-export type Participant = { id: string; name: string; included: boolean };
+export type Participant = { id: string; name: string; included: boolean; is_owner?: boolean };
 export type Proposal = {
   merchant: string; date: string; currency: string; items: Item[];
   subtotal_minor: number; tax_minor: number; tip_minor: number; discount_minor: number; total_minor: number;
@@ -19,3 +19,9 @@ export function initialDraft(receipt: Receipt): Draft | null {
   return { ...receipt.proposal, participants: [], tax_method: '', tip_method: '' };
 }
 export const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+
+// The signed-in owner is always a locked participant so later "who owes me" totals can separate their own share.
+export function withOwner(draft: Draft | null, ownerName: string | null): Draft | null {
+  if (!draft || !ownerName || draft.participants.some((p) => p.is_owner)) return draft;
+  return { ...draft, participants: [{ id: crypto.randomUUID(), name: ownerName, included: true, is_owner: true }, ...draft.participants] };
+}

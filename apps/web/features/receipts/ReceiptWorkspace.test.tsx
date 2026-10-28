@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReceiptWorkspace } from './ReceiptWorkspace';
 import { ReceiptEditor } from './ReceiptEditor';
+import { DashboardProfileContext } from '../../components/dashboard/profile-context';
 import { receiptRequest } from './api';
 import { initialDraft, type Receipt } from './types';
 
@@ -130,5 +131,16 @@ describe('owner receipt review', () => {
     expect(vi.mocked(receiptRequest)).toHaveBeenCalledWith(`/${fixture.id}`, { method: 'DELETE' });
     expect(screen.queryByRole('button', { name: 'Delete receipt' })).toBeNull();
     expect(localStorage.getItem('vp-active-receipt')).toBeNull();
+  });
+
+  it('adds the signed-in owner as a locked participant and saves the owner flag', async () => {
+    const profile = { id: 'u1', display_name: 'Ada Lovelace', email: 'ada@example.test', avatar_url: '', created_at: '', updated_at: '' };
+    vi.mocked(receiptRequest).mockImplementation(async (path) => path === '' ? { receipts: [fixture] } as never : fixture as never);
+    render(<DashboardProfileContext.Provider value={profile}><ReceiptWorkspace /></DashboardProfileContext.Provider>);
+    const name = await screen.findByLabelText('You (owner, locked)') as HTMLInputElement;
+    expect(name.value).toBe('Ada Lovelace');
+    expect(name.readOnly).toBe(true);
+    expect(screen.queryByRole('button', { name: /Remove participant 1/ })).toBeNull();
+    expect(screen.queryByText(/Unsaved changes/)).toBeNull();
   });
 });

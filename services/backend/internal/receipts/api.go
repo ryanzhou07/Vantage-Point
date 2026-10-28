@@ -385,12 +385,24 @@ func (a *API) save(w http.ResponseWriter, r *http.Request, owner, id string) {
 		return
 	}
 	participantIDs := map[string]bool{}
+	owners := 0
 	for _, person := range in.Draft.Participants {
+		if person.IsOwner {
+			owners++
+			if !person.Included {
+				apiError(w, 422, "INVALID_REVIEW", "The owner participant must stay included.")
+				return
+			}
+		}
 		if participantIDs[person.ID] {
 			apiError(w, 422, "INVALID_REVIEW", "Participant IDs must be unique.")
 			return
 		}
 		participantIDs[person.ID] = true
+	}
+	if owners > 1 {
+		apiError(w, 422, "INVALID_REVIEW", "Only one participant can be the owner.")
+		return
 	}
 	for _, item := range in.Draft.Items {
 		if item.ParticipantID != "" && !participantIDs[item.ParticipantID] {

@@ -25,9 +25,9 @@ export function ReceiptEditor({ draft, disabled, onChange }: Props) {
       <p>Included participants share tax/tip by your chosen method. Anyone who claims an item must be included.</p>
       {draft.participants.map((participant, index) => (
         <div className={styles.person} key={participant.id}>
-          <label>Participant {index + 1}<input required maxLength={100} value={participant.name} onChange={(event) => person(participant.id, { name: event.target.value })} /></label>
-          <label className={styles.check}><input type="checkbox" checked={participant.included} onChange={(event) => person(participant.id, { included: event.target.checked })} />Included</label>
-          <Button variant="secondary" onClick={() => update({ participants: draft.participants.filter((value) => value.id !== participant.id), items: draft.items.map((value) => value.participant_id === participant.id ? { ...value, participant_id: '' } : value) })}>Remove participant {index + 1}</Button>
+          <label>{participant.is_owner ? 'You (owner, locked)' : `Participant ${index + 1}`}<input required maxLength={100} readOnly={participant.is_owner} value={participant.name} onChange={(event) => person(participant.id, { name: event.target.value })} /></label>
+          <label className={styles.check}><input type="checkbox" disabled={participant.is_owner} checked={participant.included} onChange={(event) => person(participant.id, { included: event.target.checked })} />Included</label>
+          {!participant.is_owner && <Button variant="secondary" onClick={() => update({ participants: draft.participants.filter((value) => value.id !== participant.id), items: draft.items.map((value) => value.participant_id === participant.id ? { ...value, participant_id: '' } : value) })}>Remove participant {index + 1}</Button>}
         </div>
       ))}
       <Button variant="secondary" disabled={draft.participants.length >= 40} onClick={() => update({ participants: [...draft.participants, { id: crypto.randomUUID(), name: '', included: true }] })}>Add participant</Button>
