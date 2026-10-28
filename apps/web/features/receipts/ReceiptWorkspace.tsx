@@ -10,6 +10,8 @@ import { SplitSessionPanel } from './SplitSessionPanel';
 import { initialDraft, type Draft, type Receipt } from './types';
 import styles from './receipts.module.css';
 
+const ACTIVE_KEY = 'vp-active-receipt';
+
 export function ReceiptWorkspace() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
@@ -27,7 +29,18 @@ export function ReceiptWorkspace() {
     mounted.current = true;
     const controller = new AbortController();
     receiptRequest<{ receipts: Receipt[] }>('', { signal: controller.signal })
-      .then((body) => { if (mounted.current) setReceipts(body.receipts ?? []); })
+      .then(async (body) => {
+        if (!mounted.current) return;
+        const list = body.receipts ?? [];
+        setReceipts(list);
+        // Resume the receipt you were last working on (else the newest) so a refresh does not need a re-click.
+        let last: string | null = null;
+        try { last = localStorage.getItem(ACTIVE_KEY); } catch { /* per-viewer convenience only */ }
+        const target = list.find((entry) => entry.id === last) ?? list[0];
+        if (!target) return;
+        const value = await receiptRequest<Receipt>(`/${target.id}`, { signal: controller.signal });
+        if (mounted.current && !controller.signal.aborted) setReceipt((current) => { if (current) return current; setDraft(initialDraft(value)); return value; });
+      })
       .catch(() => { if (mounted.current && !controller.signal.aborted) setError('Your receipts could not be loaded. Refresh when the Receipt service is ready.'); });
     return () => { mounted.current = false; controller.abort(); };
   }, []);
@@ -40,6 +53,7 @@ export function ReceiptWorkspace() {
   function accept(value: Receipt) {
     if (!mounted.current) return;
     setReceipt(value);
+    try { localStorage.setItem(ACTIVE_KEY, value.id); } catch { /* ignore */ }
     setDraft(initialDraft(value));
     setDirty(false);
     setReceipts((current) => [value, ...current.filter((entry) => entry.id !== value.id)].slice(0, 20));
