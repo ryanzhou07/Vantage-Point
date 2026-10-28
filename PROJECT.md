@@ -326,7 +326,7 @@ Participants sitting at the same table can scan the QR code and immediately ente
 # 17. Session Expiration
 Receipt-sharing sessions should be temporary.
 Initial target:
-**Approximately 20–30 minutes**
+**5 minutes** (owner decision 2026-10-28; previously 20–30 minutes)
 The exact duration should remain configurable.
 Expiration affects access, not stored receipt data.
 Therefore:
