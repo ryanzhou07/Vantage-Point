@@ -1,5 +1,15 @@
 # Vantage-Point implementation coordination
 
+## Coordinator update — 2026-10-28
+
+Owner asked to refresh from current main and resume the local launcher before Banking work. `origin/main` advanced from `6b7af2b` to `f89e619e4f781d18bf7fedcc71109716aecc6955`, which includes merged Receipt PR #7. The dedicated branch `vp-006-local-dev-startup-f89` is based on that exact accepted commit. The old dirty `.worktrees/vp-006` remains preserved and is not the implementation base.
+
+Owner asked not to wait for hosted GitHub CI; agents run focused local checks and the owner checks hosted CI. VP-006 is split into serial small milestones under `agents/tasks/active/VP-006-milestones.md`; only M1 private configuration is active. Later milestones remain backlog until dependencies and independent review are satisfied.
+
+M1 private configuration is complete and independently APPROVED at `2d546b828c1f74f9fb047eac246f1930c84d2681`; M2 pinned-tool discovery/setup guidance is ACTIVE. M3 owned process lifecycle and M4 thin orchestration remain BACKLOG.
+
+Owner selected Teller.io instead of Plaid for the next bank integration and clarified that “user account service” means a Banking service tied to the existing signed-in identity. Draft tasks `backlog/VP-009.md`, `VP-010.md`, and `VP-011.md` describe a Teller provider/mTLS foundation, user-owned Teller connection lifecycle, and normalized user-scoped account service. They remain BACKLOG pending detailed owner scope. Teller Sandbox is simulated/free; client-certificate mTLS is mandatory for real Development/Production API calls and optional-but-validated in Sandbox if supplied. No real-bank account smoke is authorized or implied by these task drafts. No microservice or new canonical identity is proposed.
+
 The owner approved VP-002/VP-003 on 2026-10-11 and authorized dedicated task-branch pushes for subsequent owner PR review. Implementation and independent review use separate Codex subagents. No agent merge or production deployment is authorized.
 
 ## Current tasks and gates
