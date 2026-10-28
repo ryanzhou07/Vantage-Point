@@ -12,7 +12,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   window.history.replaceState(null, '', '/auth/callback?code=synthetic-code');
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 it('exchanges once in StrictMode and clears callback params before presenting a safe error and return link', async () => {
   callback.complete.mockRejectedValue(new Error('provider-detail-that-must-not-render'));
@@ -36,4 +39,29 @@ it('ignores late callback completion after unmount', async () => {
   view.unmount();
   await act(async () => finish());
   expect(window.location.search).toBe('?code=synthetic-code');
+});
+
+
+it('waits for validated exchange, clears sensitive parameters, and redirects only to the dashboard', async () => {
+  let finish!: () => void;
+  callback.complete.mockReturnValue(new Promise<void>(resolve => { finish = resolve; }));
+  const browser = window;
+  browser.history.replaceState(null, '', '/auth/callback?code=synthetic-code&next=https://evil.example');
+  const replace = vi.fn();
+  vi.stubGlobal('window', new Proxy(browser, {
+    get(target, property) {
+      if (property === 'location') return { href: target.location.href, replace };
+      return Reflect.get(target, property, target);
+    },
+  }));
+
+  const { CallbackPanel } = await import('./CallbackPanel');
+  render(<StrictMode><CallbackPanel /></StrictMode>);
+  await waitFor(() => expect(callback.complete).toHaveBeenCalledTimes(1));
+  expect(replace).not.toHaveBeenCalled();
+
+  await act(async () => finish());
+  expect(browser.location.pathname).toBe('/auth/callback');
+  expect(browser.location.search).toBe('');
+  expect(replace).toHaveBeenCalledExactlyOnceWith('/dashboard');
 });

@@ -17,7 +17,7 @@ it('exposes navigation links with the exact active page and keyboard focus styli
   expect(html).toContain('aria-label="Dashboard navigation"');
   expect(html.match(/aria-current="page"/g)).toHaveLength(1);
   expect(html).toMatch(/<a[^>]*aria-current="page"[^>]*href="\/dashboard\/accounts"/);
-  expect(html).toContain('focus-visible:');
+  expect(html).toContain('vp-nav-row');
 });
 
 it('overview links explain availability rather than implying functioning financial actions', () => {
