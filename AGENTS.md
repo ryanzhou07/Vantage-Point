@@ -562,3 +562,15 @@ changes over large speculative rewrites.
 Build the approved Vantage-Point MVP.
 
 Do not redesign the entire system while implementing one task.
+
+# 31. Credit Optimization & Local Validation
+
+To minimize API token waste, multi-turn reasoning loops, and expensive remote CI cycles, agents must adhere to the following efficiency standards:
+
+1. **Targeted Testing:** Execute only unit tests and validation checks relevant to the modified domain path rather than full-suite runs on every minor iteration.
+2. **Pre-Review Local Gate:** An agent must successfully pass local checks before transitioning any task from `ACTIVE` to `REVIEW`.
+3. **Atomic Task Scoping:** The Orchestrator must break down complex features into small, single-domain tasks (under 50 lines of core logic) to prevent conversational drift and token burn.
+4. **No Speculative Rewrites:** Stick strictly to the assigned `VP-###` task scope. Do not refactor adjacent code or redesign systems outside the task boundaries.
+5. **Execution Over Explanation:** Agents must output only the required tool calls, commands, and code. Do not narrate your thought process, summarize file modifications, or explain planned steps in the chat. Silent execution prevents context window bloat and output token waste.
+6. **Batched Context Gathering:** Consolidate file reads, codebase searches, and environment inspections into a single simultaneous tool execution. Do not perform sequential discovery (e.g., requesting File A, waiting for the response, then requesting File B). Identify all required files from the task dependencies and request them in one batch to prevent multi-turn context inflation.
+7. **Targeted File Modifications:** Implement simple changes using targeted diffs, search-and-replace tool calls, or specific line-range edits rather than rewriting or echoing entire files. Never output unmodified existing code in your response just to provide "context." Only generate the exact lines being changed.
