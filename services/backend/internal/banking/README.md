@@ -12,4 +12,4 @@ Token blobs: `key_version(1) || nonce(12) || AES-256-GCM(ciphertext+tag)`, AAD =
 
 ## Teller probe (VP-009c, removable)
 
-`GET /api/v1/banking/probe` exists only when `TELLER_PROBE_ENABLED=true`, `TELLER_ENV=sandbox`, `APP_ENV` is set and not `production`, and `TELLER_PROBE_TOKEN` (a Sandbox token) is set. A violation stops startup; flag off means no route. Removal: delete `probe.go`, `probe_test.go`, and the `banking.MustRegisterProbe` line plus the `banking` import in `cmd/api/main.go`.
+`GET /api/v1/banking/probe` exists only when `TELLER_PROBE_ENABLED=true`, `TELLER_ENV=sandbox`, `APP_ENV` is set and not `production`, and `TELLER_PROBE_TOKEN` (a Sandbox token) is set. A violation stops startup; flag off means no route. Removal: delete `probe.go`, `probe_test.go`, and the `banking.MustRegisterProbe` line in `cmd/api/main.go` (the import stays, used by the connection API).

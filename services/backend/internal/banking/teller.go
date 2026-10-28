@@ -44,6 +44,9 @@ var (
 type Provider interface {
 	// Verify makes one read-only authenticated call proving token, certificate and TLS work.
 	Verify(ctx context.Context, token string) error
+	// Revoke asks Teller to drop the enrollment's access; an already-gone enrollment is success.
+	// Unverified against current Teller docs: DELETE /accounts (re-check before production).
+	Revoke(ctx context.Context, token string) error
 }
 
 const (
@@ -105,6 +108,14 @@ func newTellerClient(ctx context.Context, env Env, src SecretSource, base string
 }
 
 func (c *TellerClient) Verify(ctx context.Context, token string) error {
+	return c.withRetry(ctx, token, http.MethodGet)
+}
+
+func (c *TellerClient) Revoke(ctx context.Context, token string) error {
+	return c.withRetry(ctx, token, http.MethodDelete)
+}
+
+func (c *TellerClient) withRetry(ctx context.Context, token, method string) error {
 	if token == "" {
 		return ErrProviderAuth
 	}
@@ -119,7 +130,7 @@ func (c *TellerClient) Verify(ctx context.Context, token string) error {
 		if attempt > 0 {
 			c.sleep(c.backoff<<(attempt-1) + rand.N(c.backoff+1))
 		}
-		if err = c.getAccounts(ctx, token); !errors.Is(err, ErrProviderUnavailable) && !errors.Is(err, ErrProviderRateLimited) {
+		if err = c.call(ctx, token, method); !errors.Is(err, ErrProviderUnavailable) && !errors.Is(err, ErrProviderRateLimited) {
 			return err
 		}
 		if ctx.Err() != nil {
@@ -129,9 +140,9 @@ func (c *TellerClient) Verify(ctx context.Context, token string) error {
 	return err
 }
 
-// getAccounts is the single read-only call; the payload is only checked for shape and discarded.
-func (c *TellerClient) getAccounts(ctx context.Context, token string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+"/accounts", nil)
+// call is GET (shape-checked, payload discarded) or DELETE (idempotent) on /accounts.
+func (c *TellerClient) call(ctx context.Context, token, method string) error {
+	req, err := http.NewRequestWithContext(ctx, method, c.base+"/accounts", nil)
 	if err != nil {
 		return ErrProviderRequest
 	}
@@ -149,7 +160,9 @@ func (c *TellerClient) getAccounts(ctx context.Context, token string) error {
 		return ErrProviderRateLimited
 	case resp.StatusCode >= 500:
 		return ErrProviderUnavailable
-	case resp.StatusCode != 200:
+	case method == http.MethodDelete && (resp.StatusCode == 200 || resp.StatusCode == 204 || resp.StatusCode == 404):
+		return nil
+	case resp.StatusCode != 200 || method != http.MethodGet:
 		return ErrProviderRequest
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize+1))
