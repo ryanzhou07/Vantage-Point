@@ -15,6 +15,8 @@ type fakeProvider struct{ err error }
 
 func (f fakeProvider) Verify(context.Context, string) error { return f.err }
 
+func (f fakeProvider) Revoke(context.Context, string) error { return f.err }
+
 func env(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
 
 func TestProbeGuard(t *testing.T) {

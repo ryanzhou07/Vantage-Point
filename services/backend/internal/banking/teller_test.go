@@ -206,3 +206,21 @@ func TestParseEnv(t *testing.T) {
 		t.Fatal("invalid accepted")
 	}
 }
+
+func TestRevoke(t *testing.T) {
+	a := newCA(t)
+	cc, ck := a.issue(t, time.Now().Add(time.Hour), false)
+	src := mapSource{SecretTellerCert: string(cc), SecretTellerKey: string(ck)}
+	for code, want := range map[int]error{204: nil, 404: nil, 401: ErrProviderAuth, 400: ErrProviderRequest} {
+		f := startTeller(t, a, a, func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != "DELETE" {
+				t.Error("wrong method")
+			}
+			w.WriteHeader(code)
+		})
+		c, _ := client(t, EnvDevelopment, src, f, a.pool, time.Second)
+		if err := c.Revoke(context.Background(), "tok"); !errors.Is(err, want) && err != want {
+			t.Fatal(code, err)
+		}
+	}
+}
