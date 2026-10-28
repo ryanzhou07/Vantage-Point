@@ -29,15 +29,18 @@ type rateEntry struct {
 }
 type API struct {
 	Store *Store
+	TTL   time.Duration
+	Now   func() time.Time // injected in tests; backend clock decides session expiry
 	slots chan struct{}
 	mu    sync.Mutex
 	rates map[string]rateEntry
 }
 
 func NewAPI(s *Store) *API {
-	return &API{Store: s, slots: make(chan struct{}, 2), rates: map[string]rateEntry{}}
+	return &API{Store: s, TTL: DefaultSessionTTL, Now: time.Now, slots: make(chan struct{}, 2), rates: map[string]rateEntry{}}
 }
-func (a *API) allow(id string) bool {
+func (a *API) allow(id string) bool { return a.allowKey(id, 60) }
+func (a *API) allowKey(id string, limit int) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	now := time.Now()
@@ -45,7 +48,7 @@ func (a *API) allow(id string) bool {
 	if now.Sub(e.start) >= time.Minute {
 		e = rateEntry{start: now}
 	}
-	if e.count >= 60 {
+	if e.count >= limit {
 		return false
 	}
 	if len(a.rates) >= 4096 {
@@ -76,6 +79,12 @@ func storeError(w http.ResponseWriter, e error) {
 	case "RECEIPT_NOT_FOUND":
 		status = 404
 		msg = "Receipt was not found."
+	case "SESSION_NOT_FOUND":
+		status = 404
+		msg = "No active split session."
+	case "SESSION_INVALID":
+		status = 401
+		msg = "This split link is invalid or has expired."
 	case "RECEIPT_CONFLICT":
 		status = 409
 		msg = "This receipt changed. Reload before saving again."
@@ -98,6 +107,11 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		apiError(w, 401, "UNAUTHENTICATED", "Sign in to continue.")
 		return
 	}
+	a.serve(w, r, owner)
+}
+
+// serve takes the owner from verified context (tests call it directly).
+func (a *API) serve(w http.ResponseWriter, r *http.Request, owner string) {
 	if !a.allow(owner) {
 		w.Header().Set("Retry-After", "60")
 		apiError(w, 429, "RATE_LIMITED", "Wait a minute before refreshing again.")
@@ -125,7 +139,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
-	if len(parts) > 2 || !receiptID.MatchString(parts[0]) {
+	if len(parts) > 4 || !receiptID.MatchString(parts[0]) {
 		apiError(w, 404, "NOT_FOUND", "Receipt route not found.")
 		return
 	}
@@ -133,6 +147,14 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	record, e := a.Store.get(r.Context(), owner, id)
 	if e != nil {
 		storeError(w, e)
+		return
+	}
+	if len(parts) >= 2 && parts[1] == "session" {
+		a.sessionRoute(w, r, owner, id, parts[2:])
+		return
+	}
+	if len(parts) > 2 {
+		apiError(w, 404, "NOT_FOUND", "Receipt route not found.")
 		return
 	}
 	if len(parts) == 1 && r.Method == "GET" {

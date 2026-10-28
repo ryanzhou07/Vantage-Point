@@ -28,7 +28,13 @@ func main() {
 	mux.Handle("/api/v1/me", auth.Protect(http.HandlerFunc(auth.Me)))
 	// Missing Receipt configuration disables only Receipt operations, never auth.
 	receiptStore, _ := receipts.NewStore(os.Getenv("SUPABASE_URL"), os.Getenv("SUPABASE_SERVICE_ROLE_KEY"))
-	receiptAPI := auth.ProtectMethods(receipts.NewAPI(receiptStore), "GET", "POST")
+	ttl, err := receipts.ParseSessionTTL(os.Getenv("SPLIT_SESSION_TTL"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	api := receipts.NewAPI(receiptStore)
+	api.TTL = ttl
+	receiptAPI := auth.ProtectMethods(api, "GET", "POST")
 	mux.Handle("/api/v1/receipts", receiptAPI)
 	mux.Handle("/api/v1/receipts/", receiptAPI)
 	server := &http.Server{Addr: ":" + port, Handler: mux, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16384}

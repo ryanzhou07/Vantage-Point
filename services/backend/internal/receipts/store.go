@@ -67,7 +67,7 @@ func (s *Store) request(ctx context.Context, method, path, mime string, data []b
 		}
 		_ = json.Unmarshal(b, &failure)
 		switch failure.Message {
-		case "RECEIPT_QUOTA", "RECEIPT_NOT_FOUND", "RECEIPT_CONFLICT", "RECEIPT_NOT_REVIEWABLE", "RECEIPT_RETRY_LIMIT", "RECEIPT_INVALID_REVIEW", "RECEIPT_INVALID_ALLOCATION":
+		case "RECEIPT_QUOTA", "RECEIPT_NOT_FOUND", "RECEIPT_CONFLICT", "RECEIPT_NOT_REVIEWABLE", "RECEIPT_RETRY_LIMIT", "RECEIPT_INVALID_REVIEW", "RECEIPT_INVALID_ALLOCATION", "SESSION_NOT_FOUND", "SESSION_INVALID":
 			return nil, errors.New(failure.Message)
 		}
 		return nil, errors.New("RECEIPT_UNAVAILABLE")
