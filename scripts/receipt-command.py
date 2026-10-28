@@ -61,7 +61,7 @@ def main():
     executable = shutil.which('go')
     # Reuse the repository's pinned local Go toolchain when already installed;
     # do not provision tools or change the system-wide environment here.
-    cached = sorted((primary / '.local-tools/gopath/pkg/mod/golang.org').glob('toolchain@v0.0.1-go1.26.9.*/bin/go'))
+    cached = sorted((primary / '.local-tools/gopath/pkg/mod/golang.org').glob('toolchain@v0.0.1-go1.26.10.*/bin/go'))
     if cached:
         executable = str(cached[0])
         env['GOPATH'] = str(primary / '.local-tools/gopath')
