@@ -28,3 +28,7 @@ supabase/.branches/
 .local-logs/
 .worktrees/
 .pnpm-store/
+
+# Provider secrets
+*.pem
+*.key
