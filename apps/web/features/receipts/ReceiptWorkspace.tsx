@@ -7,7 +7,8 @@ import { receiptRequest, receiptImage, postJSON } from './api';
 import { ReceiptEditor } from './ReceiptEditor';
 import { SplitPreview } from './SplitPreview';
 import { SplitSessionPanel } from './SplitSessionPanel';
-import { initialDraft, type Draft, type Receipt } from './types';
+import { initialDraft, money, type Draft, type Receipt } from './types';
+import { missingFields } from './validate';
 import styles from './receipts.module.css';
 
 const ACTIVE_KEY = 'vp-active-receipt';
@@ -17,6 +18,7 @@ export function ReceiptWorkspace() {
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -115,6 +117,8 @@ export function ReceiptWorkspace() {
     } catch { /* next trigger retries */ }
   }
 
+  const missing = draft ? missingFields(draft) : [];
+
   async function remove() {
     if (!receipt || !window.confirm('Delete this receipt, its image and all claims? This cannot be undone.')) return;
     const id = receipt.id;
@@ -127,9 +131,16 @@ export function ReceiptWorkspace() {
     setNotice('Receipt deleted.');
   }
 
+  async function confirm() {
+    await save(false);
+    setEditing(false);
+    setNotice('Receipt confirmed. Share the QR code or link so people can claim their items.');
+  }
+
   async function open(id: string) {
     if (dirty && !window.confirm('Discard unsaved changes and load this receipt?')) return;
     accept(await receiptRequest<Receipt>(`/${id}`));
+    setEditing(false);
     setImageURL('');
   }
 
@@ -156,13 +167,28 @@ export function ReceiptWorkspace() {
         {receipt.proposal && <details><summary>Original extracted proposal</summary><pre className={styles.proposal}>{JSON.stringify(receipt.proposal, null, 2)}</pre></details>}
         {!imageURL && <Button variant="secondary" disabled={busy} onClick={() => void action(async () => { const image = await receiptImage(receipt.id); if (mounted.current) setImageURL(URL.createObjectURL(image)); })}>Load private receipt image</Button>}
         {imageURL && <a href={imageURL} target="_blank" rel="noreferrer">Open your selected image for comparison</a>}
-        {draft && <>
+        {draft && (editing || !receipt.draft) && <>
           <ReceiptEditor draft={draft} disabled={busy} onChange={(value) => { setDraft(value); setDirty(true); }} />
-          <div className={styles.actions}><Button variant="secondary" disabled={busy} onClick={() => void action(() => save(false))}>Save draft</Button><Button disabled={busy} onClick={() => void action(() => save(true))}>Verify and calculate draft split</Button></div>
-          {dirty && <Feedback>Unsaved changes. Save and calculate again to update the draft preview.</Feedback>}
-          {!dirty && receipt.preview && <SplitPreview preview={receipt.preview} draft={draft} />}
+          {missing.length > 0
+            ? <Feedback tone="error"><strong>Fix these before you can continue ({missing.length}):</strong><ul>{missing.map((line) => <li key={line}>{line}</li>)}</ul></Feedback>
+            : <Feedback>Everything is filled in. Confirm to move on to sharing.</Feedback>}
+          {dirty && <Feedback>Unsaved changes. Confirm or save the draft to keep them.</Feedback>}
+          <div className={styles.actions}><Button disabled={busy || missing.length > 0} onClick={() => void action(confirm)}>Confirm receipt and continue</Button><Button variant="secondary" disabled={busy} onClick={() => void action(() => save(false))}>Save draft</Button></div>
         </>}
-        {receipt.status === 'NEEDS_REVIEW' && <SplitSessionPanel receiptId={receipt.id} onUpdate={() => void syncClaims()} />}
+        {draft && receipt.draft && !editing && receipt.status === 'NEEDS_REVIEW' && <>
+          <section className={styles.card} aria-labelledby="confirmed-receipt">
+            <h2 id="confirmed-receipt">Step 2 of 2 · Share and claim</h2>
+            <p>{receipt.draft.merchant} · {receipt.draft.date} · total {money(receipt.draft.total_minor)}. People scan the code or open the link, enter their name and claim their own items.</p>
+            <ul>{draft.items.map((line) => <li key={line.id}>{line.name} · {money(line.amount_minor)} · {draft.participants.find((p) => p.id === line.participant_id)?.name ?? 'not claimed yet'}</li>)}</ul>
+            <div className={styles.actions}>
+              <Button variant="secondary" disabled={busy} onClick={() => setEditing(true)}>Edit receipt details</Button>
+              <Button disabled={busy || draft.items.some((line) => !line.participant_id)} onClick={() => void action(() => save(true))}>Calculate split preview</Button>
+            </div>
+            {draft.items.some((line) => !line.participant_id) && <p>The split preview unlocks once every item is claimed.</p>}
+          </section>
+          {!dirty && receipt.preview && <SplitPreview preview={receipt.preview} draft={draft} />}
+          <SplitSessionPanel receiptId={receipt.id} onUpdate={() => void syncClaims()} />
+        </>}
       </section>}
     </div>
   );

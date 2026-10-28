@@ -40,12 +40,26 @@ describe('owner receipt review', () => {
     await waitFor(() => expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id)); // opens the active receipt without a click
     await screen.findByRole('heading', { name: 'Saved draft split preview' });
     expect(screen.getByText(/Nobody has confirmed/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit receipt details' }));
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Reviewed cafe' } });
-    expect(screen.queryByRole('heading', { name: 'Saved draft split preview' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Verify and calculate draft split' }));
-    await screen.findByText('Owner-reviewed draft preview saved.');
+    fireEvent.change(screen.getByLabelText('Receipt date (YYYY-MM-DD)'), { target: { value: '2026-10-15' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm receipt and continue' }));
+    await screen.findByText(/Receipt confirmed/);
     const request = vi.mocked(receiptRequest).mock.calls.find(([path, init]) => path.endsWith('/review') && init?.method === 'POST');
-    expect(JSON.parse(request![1]!.body as string)).toMatchObject({ version: 4, calculate: true, draft: { merchant: 'Reviewed cafe' } });
+    expect(JSON.parse(request![1]!.body as string)).toMatchObject({ version: 4, calculate: false, draft: { merchant: 'Reviewed cafe', date: '2026-10-15' } });
+  });
+
+  it('lists every missing field and blocks confirming until the form is complete', async () => {
+    vi.mocked(receiptRequest).mockImplementation(async (path) => path === '' ? { receipts: [fixture] } as never : fixture as never);
+    render(<ReceiptWorkspace />);
+    await screen.findByLabelText('Merchant');
+    const confirm = screen.getByRole('button', { name: 'Confirm receipt and continue' }) as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+    const alert = screen.getByRole('alert').textContent!;
+    expect(alert).toMatch(/Receipt date is missing/);
+    expect(alert).toMatch(/Choose how tax is split/);
+    expect(alert).toMatch(/Choose how tip is split/);
+    expect(vi.mocked(receiptRequest).mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
   });
 
   it('surfaces conflicts while preserving unsaved corrections', async () => {

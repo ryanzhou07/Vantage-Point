@@ -120,13 +120,13 @@ describe('owner session panel', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     fireEvent.click(screen.getByRole('button', { name: 'Start split session' }));
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    expect((screen.getByLabelText('Share link') as HTMLInputElement).value).toMatch(/\/split#secret-token$/);
+    expect((screen.getByLabelText('Link') as HTMLInputElement).value).toMatch(/\/split#secret-token$/);
     expect(screen.getByRole('img', { name: /QR code/ }).querySelector('svg')).toBeTruthy();
     expect(screen.getByRole('timer').textContent).toBe('Closes in 5:00');
     await act(async () => { await vi.advanceTimersByTimeAsync(300000); });
     expect(screen.getByText(/session expired/i)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Close now' })).toBeNull();
-    expect(screen.queryByLabelText('Share link')).toBeNull();
+    expect(screen.queryByLabelText('Link')).toBeNull();
     expect(window.localStorage.length).toBe(0);
   });
 });
