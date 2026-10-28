@@ -47,7 +47,7 @@ export function ReceivablesPanel() {
 
   return (
     <section className={styles.list} aria-labelledby="receivables-title">
-      <h2 id="receivables-title">Money owed to you</h2>
+      <h2 id="receivables-title">Receivables · money owed to you</h2>
       {phase === 'loading' && <Feedback>Loading what people owe you...</Feedback>}
       {phase === 'error' && <><Feedback tone="error">Could not load receivables.</Feedback><Button variant="secondary" onClick={() => { setPhase('loading'); setAttempt((n) => n + 1); }}>Try again</Button></>}
       {error && <Feedback tone="error">{error}</Feedback>}

@@ -61,7 +61,7 @@ export function ReceiptList() {
       {phase === 'ready' && <>
         <p className={styles.outstanding}>Outstanding from finalized receipts: <strong>{money(outstanding)}</strong></p>
         <p className={styles.note}>Draft previews are only estimates and are not counted as owed.</p>
-        {rows.length === 0 && <p>No receipts yet. Upload a receipt below to start a split.</p>}
+        {rows.length === 0 && <p>No receipts yet. Upload one on the Receipt splitting tab to start a split.</p>}
         <ul className={styles.rows}>
           {rows.map((row) => (
             <li key={row.id} className={styles.row}>

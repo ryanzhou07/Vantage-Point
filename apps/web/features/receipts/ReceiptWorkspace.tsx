@@ -145,7 +145,7 @@ export function ReceiptWorkspace() {
     if (!receipt || !window.confirm('Finalize this receipt? Everyone\'s amount becomes a receivable, the share link stops working, and the receipt can no longer be edited.')) return;
     accept(await receiptRequest<Receipt>(`/${receipt.id}/finalize`, postJSON({ version: receipt.version })));
     window.dispatchEvent(new Event('receipts:changed'));
-    setNotice('Receipt finalized. Track who has paid under Money owed to you.');
+    setNotice('Receipt finalized. Track who has paid on the Receivables tab.');
   }
 
   async function open(id: string) {
@@ -187,7 +187,7 @@ export function ReceiptWorkspace() {
           <div className={styles.actions}><Button disabled={busy || missing.length > 0} onClick={() => void action(confirm)}>Confirm receipt and continue</Button><Button variant="secondary" disabled={busy} onClick={() => void action(() => save(false))}>Save draft</Button></div>
         </>}
         {draft && receipt.draft && receipt.status === 'FINALIZED' && <>
-          <Feedback>Finalized. This split is locked. Amounts owed to you are listed under Money owed to you.</Feedback>
+          <Feedback>Finalized. This split is locked. Amounts owed to you are on the Receivables tab.</Feedback>
           {receipt.preview && <SplitPreview preview={receipt.preview} draft={draft} />}
         </>}
         {draft && receipt.draft && !editing && receipt.status === 'NEEDS_REVIEW' && <>
