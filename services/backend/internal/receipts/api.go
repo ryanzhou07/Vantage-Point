@@ -92,6 +92,21 @@ func storeError(w http.ResponseWriter, e error) {
 	case "RECEIPT_INVALID_REVIEW", "RECEIPT_INVALID_ALLOCATION":
 		status = 422
 		msg = "Check item assignments and receipt amounts before saving."
+	case "SPLIT_NOT_READY":
+		status = 409
+		msg = "The owner has not finished reviewing this receipt yet."
+	case "SPLIT_INVALID_NAME":
+		status = 422
+		msg = "Enter a name up to 100 characters."
+	case "SPLIT_FULL":
+		status = 409
+		msg = "This split already has the maximum number of people."
+	case "SPLIT_PARTICIPANT_NOT_FOUND", "SPLIT_ITEM_NOT_FOUND":
+		status = 404
+		msg = "That person or item is not on this receipt."
+	case "SPLIT_CLAIM_CONFLICT":
+		status = 409
+		msg = "Someone else already claimed that item."
 	case "RECEIPT_NOT_REVIEWABLE", "RECEIPT_RETRY_LIMIT":
 		status = 409
 		msg = "This operation is unavailable for the current receipt state."

@@ -70,3 +70,37 @@ func TestJoinRateLimitedAndCORS(t *testing.T) {
 		t.Fatal(w.Code, w.Header())
 	}
 }
+
+func claim(a *API, body string) int {
+	r := httptest.NewRequest("POST", "/api/v1/split/claim", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/json")
+	r.RemoteAddr = "203.0.113.10:1234"
+	w := httptest.NewRecorder()
+	a.Claim(w, r)
+	return w.Code
+}
+
+func TestOpenJoinByNameAndClaimConflictAndExpiry(t *testing.T) {
+	clock := time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)
+	a, db := sessionAPI(t, &clock)
+	_, created := call(a, ownerA, "POST", "/session")
+	tok := created["token"].(string)
+	join(a, `{"token":"`+tok+`","name":"Jo"}`)
+	if !strings.Contains(strings.Join(db.bodies, ""), `"p_name":"Jo"`) {
+		t.Fatal("typed name did not reach split_join_add")
+	}
+	p := "44444444-4444-4444-8444-444444444444"
+	if c := claim(a, `{"token":"`+tok+`","participant_id":"`+p+`","item_id":"`+itemFree+`"}`); c != 200 {
+		t.Fatal("free item claim", c)
+	}
+	if c := claim(a, `{"token":"`+tok+`","participant_id":"`+p+`","item_id":"`+itemHeld+`"}`); c != 409 {
+		t.Fatal("held item must conflict", c)
+	}
+	if c := claim(a, `{"token":"`+tok+`","participant_id":"nope","item_id":"`+itemFree+`"}`); c != 400 {
+		t.Fatal("bad id", c)
+	}
+	clock = clock.Add(5 * time.Minute)
+	if c := claim(a, `{"token":"`+tok+`","participant_id":"`+p+`","item_id":"`+itemFree+`"}`); c != 401 {
+		t.Fatal("claim accepted after expiry", c)
+	}
+}

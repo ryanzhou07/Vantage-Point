@@ -92,6 +92,15 @@ export function ReceiptWorkspace() {
     setNotice(calculate ? 'Owner-reviewed draft preview saved.' : 'Draft saved. Calculation has not been verified.');
   }
 
+  // Pick up joins/claims made by participants, but never replace edits the owner has not saved.
+  async function syncClaims() {
+    if (!receipt || dirty || pending.current) return;
+    try {
+      const value = await receiptRequest<Receipt>(`/${receipt.id}`);
+      if (value.version !== receipt.version && !pending.current) accept(value);
+    } catch { /* next trigger retries */ }
+  }
+
   async function open(id: string) {
     if (dirty && !window.confirm('Discard unsaved changes and load this receipt?')) return;
     accept(await receiptRequest<Receipt>(`/${id}`));
@@ -127,7 +136,7 @@ export function ReceiptWorkspace() {
           {dirty && <Feedback>Unsaved changes. Save and calculate again to update the draft preview.</Feedback>}
           {!dirty && receipt.preview && <SplitPreview preview={receipt.preview} draft={draft} />}
         </>}
-        {receipt.status === 'NEEDS_REVIEW' && <SplitSessionPanel receiptId={receipt.id} />}
+        {receipt.status === 'NEEDS_REVIEW' && <SplitSessionPanel receiptId={receipt.id} onUpdate={() => void syncClaims()} />}
       </section>}
     </div>
   );

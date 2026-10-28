@@ -16,13 +16,15 @@ function Qr({ text }: { text: string }) {
   return <div className={styles.qr} role="img" aria-label="QR code for the split link" dangerouslySetInnerHTML={{ __html: qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) }} />;
 }
 
-export function SplitSessionPanel({ receiptId }: { receiptId: string }) {
+export function SplitSessionPanel({ receiptId, onUpdate }: { receiptId: string; onUpdate?: () => void }) {
   const [view, setView] = useState<SessionView | null>(null);
   const [link, setLink] = useState<{ id: string; url: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const mounted = useRef(true);
+  const updateRef = useRef(onUpdate);
+  useEffect(() => { updateRef.current = onUpdate; });
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const apply = useCallback((next: SessionView | undefined) => {
@@ -31,6 +33,7 @@ export function SplitSessionPanel({ receiptId }: { receiptId: string }) {
     if (next.token) setLink({ id: next.session.id, url: `${window.location.origin}/split#${next.token}` });
   }, []);
   const refetch = useCallback(async () => {
+    updateRef.current?.(); // participants may have joined or claimed; let the owner view catch up
     try { apply(await receiptRequest<SessionView>(`/${receiptId}/session`)); } catch { /* keep last known state; next trigger retries */ }
   }, [receiptId, apply]);
   useEffect(() => { Promise.resolve(receiptRequest<SessionView>(`/${receiptId}/session`)).then(apply, () => undefined); }, [receiptId, apply]);
@@ -48,7 +51,7 @@ export function SplitSessionPanel({ receiptId }: { receiptId: string }) {
   return (
     <section className={styles.card} aria-labelledby={`split-${receiptId}`}>
       <h2 id={`split-${receiptId}`}>Split session</h2>
-      <p>Share a temporary link so people can pick their name. It closes automatically; the receipt stays saved.</p>
+      <p>Share a temporary link so people can join with their name and claim their own items. It closes automatically; the receipt stays saved.</p>
       {error && <Feedback tone="error">{error}</Feedback>}
       {active && <>
         <p className={styles.timer} role="timer" aria-live="off">{remaining > 0 ? `Closes in ${formatRemaining(remaining)}` : 'Confirming status...'}</p>

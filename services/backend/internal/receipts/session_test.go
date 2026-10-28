@@ -12,9 +12,11 @@ import (
 )
 
 const (
-	rid    = "11111111-1111-4111-8111-111111111111"
-	ownerA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-	ownerB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+	rid      = "11111111-1111-4111-8111-111111111111"
+	ownerA   = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+	ownerB   = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+	itemFree = "22222222-2222-4222-8222-222222222222"
+	itemHeld = "33333333-3333-4333-8333-333333333333"
 )
 
 // fakeDB emulates the split_session_* RPC semantics and records every request body.
@@ -58,6 +60,16 @@ func (f *fakeDB) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		f.active = false
+	case "split_join_add":
+		_, _ = w.Write([]byte(`{"id":"p1","name":"` + asString(in["p_name"]) + `"}`))
+		return
+	case "split_claim":
+		if in["p_item"] == itemHeld {
+			fail("SPLIT_CLAIM_CONFLICT")
+			return
+		}
+		_, _ = w.Write([]byte(`{}`))
+		return
 	case "split_session_check":
 		if !f.active || in["p_hash"] != f.hash || !now.Before(f.exp) {
 			fail("SESSION_INVALID")
