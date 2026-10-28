@@ -61,3 +61,9 @@ On 2026-10-28 the owner reported `GO-2026-6809` in Go1.26.9. VP-012 updates the 
 Owner requested automatic removal of resolved worktrees. Orchestrator safely removed the completed/pushed VP-002 worktree after confirming its only dirty file was a byte-identical copy of the owner's root DESIGN.md and no local credential files were present. Branches and original files remain.
 
 **Keep VP-003 frontend localhost3000, API localhost8080, local Supabase563xx and its worktree running while the owner inspects the preview.** Resolved cleanup is deferred during inspection. Do not reset the live database, stop services, or run a build over live frontend artifacts. Future cleanup requires committed/preserved work and private preservation of local configuration outside the removed checkout; no force removal or branch deletion. Keep the primary checkout and active worktrees.
+
+
+## Banking/Teller plan — 2026-10-28
+Owner decisions: AWS Secrets Manager + app-level AES-256-GCM; balances in first scope; manual refresh with reusable `SyncConnection`; removable Sandbox probe; local cert/key under `~/.config/vantage-point/teller/`; 5-minute cooldown. Banking is a module of the single Go API (no microservice). Backlog: VP-009a/b/c, VP-010, VP-011; ADR-009 proposed. Original VP-009 split into 009a/b/c.
+
+Added VP-014 (import-boundary CI check, BACKLOG) and ADR-010 (modular monolith split strategy, PROPOSED).
