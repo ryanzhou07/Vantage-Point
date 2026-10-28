@@ -17,6 +17,15 @@ Pin Go 1.26.9 in go.mod, CI and developer docs and rerun all backend/security ch
 Go release changes may affect future dependencies; the current API has no external
 Go dependencies. No authentication/product architecture is changed.
 
+### 2026-10-28 patch update
+
+`GO-2026-6809` affects `crypto/x509` before Go 1.26.10 and was reachable through
+the API's HTTP server certificate-verification path. Pin Go 1.26.10 in active
+runtime configuration, CI, and developer documentation and rerun the same backend
+and security checks. This is the minimum fixed patch release in the existing Go
+1.26 line; it does not change application behavior or architecture. Historical
+1.26.9 evidence above remains an accurate record of the earlier remediation.
+
 ## Braces (temporary accepted residual risk)
 
 https://github.com/advisories/GHSA-vfj7-8cjw-p6xm affects braces <=3.0.3 and lists no

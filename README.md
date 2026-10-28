@@ -61,7 +61,7 @@ See `DESIGN.md` for the authoritative technical design.
 
 ## Development
 
-Use Node.js `22.21.0`, pnpm `10.34.6`, and Go `1.26.9`. Enable pnpm through Corepack (or install the pinned pnpm release), then:
+Use Node.js `22.21.0`, pnpm `10.34.6`, and Go `1.26.10`. Enable pnpm through Corepack (or install the pinned pnpm release), then:
 
 ```sh
 pnpm install --frozen-lockfile

@@ -44,6 +44,8 @@ Follow agents/TESTING.md with pinned runtimes and meaningful tests. Push ordinar
 
 On 2026-10-11 owner explicitly approved Go1.26.9 and full retesting, plus assessment of the exact unpatched lint-only braces advisory GHSA-vfj7-8cjw-p6xm subject to independent review. ADR-002 records the bounded temporary exception; all other findings remain blocking.
 
+On 2026-10-28 the owner reported `GO-2026-6809` in Go1.26.9. VP-012 updates the active pin to the minimum fixed Go1.26.10 release and reruns backend/security checks; historical 1.26.9 evidence remains unchanged.
+
 ## Resolved worktree cleanup and active preview
 
 Owner requested automatic removal of resolved worktrees. Orchestrator safely removed the completed/pushed VP-002 worktree after confirming its only dirty file was a byte-identical copy of the owner's root DESIGN.md and no local credential files were present. Branches and original files remain.
