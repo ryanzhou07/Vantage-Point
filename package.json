@@ -5,6 +5,12 @@
   "engines": {
     "node": "22.21.0"
   },
+  "pnpm": {
+    "overrides": {
+      "undici@8.11.2": "8.12.2",
+      "zod@4.6.5": "4.6.6"
+    }
+  },
   "scripts": {
     "dev": "pnpm --filter @vantage-point/web dev",
     "lint": "pnpm --filter @vantage-point/web lint",
