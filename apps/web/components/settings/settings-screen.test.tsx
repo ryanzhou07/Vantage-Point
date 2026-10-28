@@ -7,6 +7,7 @@ import { DashboardShell } from '../dashboard/dashboard-shell';
 
 vi.mock('../../lib/auth/client', () => ({ authClient: () => ({ auth: { onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }) } }) }));
 vi.mock('../../lib/auth/flows', () => ({ loadProfile: async () => null, signOut: vi.fn() }));
+vi.mock('../../features/banking/api', () => ({ listConnections: async () => [], enroll: vi.fn(), disconnect: vi.fn() }));
 vi.mock('next/navigation', () => ({ usePathname: () => '/dashboard/settings' }));
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -40,14 +41,14 @@ it('offers accessible local theme previews without global or storage changes', (
   expect(storage).not.toHaveBeenCalled();
 });
 
-it('never sends connection/payment mutations or claims fake connected accounts', () => {
+it('never sends payment mutations and shows the honest empty bank state', async () => {
   const fetcher = vi.spyOn(globalThis, 'fetch');
   render(<SettingsScreen />);
   fireEvent.click(screen.getByRole('button', { name: 'Plugins / Connections' }));
-  expect(screen.getByText('No bank connections to display')).toBeTruthy();
+  expect(await screen.findByText('No bank connections yet')).toBeTruthy();
   expect(screen.getByText(/contact details, not live account integrations/)).toBeTruthy();
   fireEvent.change(screen.getByLabelText('Venmo username preview'), { target: { value: '@test-only' } });
-  for (const name of ['Connect a bank', 'Save payment details', 'Remove payment details']) {
+  for (const name of ['Save payment details', 'Remove payment details']) {
     const action = screen.getByRole('button', { name });
     expect(action.hasAttribute('disabled')).toBe(true);
     fireEvent.click(action);
