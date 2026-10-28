@@ -139,6 +139,10 @@ func (a *API) serve(w http.ResponseWriter, r *http.Request, owner string) {
 		}
 		return
 	}
+	if path == "/summary" && r.Method == "GET" {
+		a.summary(w, r, owner)
+		return
+	}
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 	if len(parts) > 4 || !receiptID.MatchString(parts[0]) {
 		apiError(w, 404, "NOT_FOUND", "Receipt route not found.")
