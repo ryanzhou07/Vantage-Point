@@ -45,7 +45,7 @@ Go
 Initial hosting direction:
 
 ```text
-Google Cloud Run
+AWS
 ```
 
 ## Database / Platform
@@ -1521,10 +1521,10 @@ Next.js
    → Vercel
 
 Go API
-   → Google Cloud Run
+   → AWS
 
 Workers
-   → Google Cloud Run-compatible deployment
+   → AWS-compatible deployment
 
 Database/Auth/Realtime/Storage
    → Supabase
