@@ -11,6 +11,7 @@ import (
 	_ "image/png"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"sync"
@@ -92,6 +93,21 @@ func storeError(w http.ResponseWriter, e error) {
 	case "RECEIPT_INVALID_REVIEW", "RECEIPT_INVALID_ALLOCATION":
 		status = 422
 		msg = "Check item assignments and receipt amounts before saving."
+	case "SPLIT_NOT_READY":
+		status = 409
+		msg = "The owner has not finished reviewing this receipt yet."
+	case "SPLIT_INVALID_NAME":
+		status = 422
+		msg = "Enter a name up to 100 characters."
+	case "SPLIT_FULL":
+		status = 409
+		msg = "This split already has the maximum number of people."
+	case "SPLIT_PARTICIPANT_NOT_FOUND", "SPLIT_ITEM_NOT_FOUND":
+		status = 404
+		msg = "That person or item is not on this receipt."
+	case "SPLIT_CLAIM_CONFLICT":
+		status = 409
+		msg = "Someone else already claimed that item."
 	case "RECEIPT_NOT_REVIEWABLE", "RECEIPT_RETRY_LIMIT":
 		status = 409
 		msg = "This operation is unavailable for the current receipt state."
@@ -106,6 +122,10 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	owner, ok := foundation.UserID(r.Context())
 	if !ok {
 		apiError(w, 401, "UNAUTHENTICATED", "Sign in to continue.")
+		return
+	}
+	if strings.HasPrefix(r.URL.Path, "/api/v1/receivables") {
+		a.receivables(w, r, owner)
 		return
 	}
 	a.serve(w, r, owner)
@@ -139,7 +159,20 @@ func (a *API) serve(w http.ResponseWriter, r *http.Request, owner string) {
 		}
 		return
 	}
-	if path == "/summary" && r.Method == "GET" {
+	if strings.HasPrefix(path, "/summary") && r.Method == "GET" {
+		// Foundation rejects query strings, so the page limit and cursor travel as path segments.
+		seg := strings.Split(strings.Trim(path, "/"), "/")
+		if seg[0] != "summary" || len(seg) > 3 {
+			apiError(w, 404, "NOT_FOUND", "Receipt route not found.")
+			return
+		}
+		if len(seg) > 1 {
+			q := url.Values{"limit": {seg[1]}}
+			if len(seg) == 3 {
+				q.Set("cursor", seg[2])
+			}
+			r.URL.RawQuery = q.Encode()
+		}
 		a.summary(w, r, owner)
 		return
 	}
@@ -179,6 +212,10 @@ func (a *API) serve(w http.ResponseWriter, r *http.Request, owner string) {
 		_, _ = w.Write(data)
 		return
 	}
+	if len(parts) == 1 && r.Method == "DELETE" {
+		a.remove(w, r, owner, id)
+		return
+	}
 	if r.Method != "POST" || len(parts) != 2 {
 		apiError(w, 405, "METHOD_NOT_ALLOWED", "Use the documented receipt operation.")
 		return
@@ -186,6 +223,19 @@ func (a *API) serve(w http.ResponseWriter, r *http.Request, owner string) {
 	switch parts[1] {
 	case "review":
 		a.save(w, r, owner, id)
+	case "finalize":
+		var in struct {
+			Version int64 `json:"version"`
+		}
+		if !readJSON(w, r, &in) {
+			return
+		}
+		var result Record
+		if e = a.Store.rpc(r.Context(), "receipt_finalize", map[string]any{"p_owner": owner, "p_id": id, "p_version": in.Version}, &result); e != nil {
+			storeError(w, e)
+			return
+		}
+		jsonReply(w, 200, result)
 	case "retry":
 		var in struct {
 			Version int64 `json:"version"`
@@ -366,12 +416,24 @@ func (a *API) save(w http.ResponseWriter, r *http.Request, owner, id string) {
 		return
 	}
 	participantIDs := map[string]bool{}
+	owners := 0
 	for _, person := range in.Draft.Participants {
+		if person.IsOwner {
+			owners++
+			if !person.Included {
+				apiError(w, 422, "INVALID_REVIEW", "The owner participant must stay included.")
+				return
+			}
+		}
 		if participantIDs[person.ID] {
 			apiError(w, 422, "INVALID_REVIEW", "Participant IDs must be unique.")
 			return
 		}
 		participantIDs[person.ID] = true
+	}
+	if owners > 1 {
+		apiError(w, 422, "INVALID_REVIEW", "Only one participant can be the owner.")
+		return
 	}
 	for _, item := range in.Draft.Items {
 		if item.ParticipantID != "" && !participantIDs[item.ParticipantID] {
@@ -395,4 +457,24 @@ func (a *API) save(w http.ResponseWriter, r *http.Request, owner, id string) {
 		return
 	}
 	jsonReply(w, 200, result)
+}
+
+// remove deletes the owner's receipt (rows first, then the private image, best effort).
+func (a *API) remove(w http.ResponseWriter, r *http.Request, owner, id string) {
+	if !a.allowKey("delete:"+owner, 10) {
+		w.Header().Set("Retry-After", "60")
+		apiError(w, 429, "RATE_LIMITED", "Too many deletes. Wait a minute.")
+		return
+	}
+	var out struct {
+		ImagePath string `json:"image_path"`
+	}
+	if e := a.Store.rpc(r.Context(), "receipt_delete", map[string]string{"p_owner": owner, "p_id": id}, &out); e != nil {
+		storeError(w, e)
+		return
+	}
+	if out.ImagePath != "" {
+		_, _ = a.Store.request(r.Context(), "DELETE", "/storage/v1/object/receipt-images/"+out.ImagePath, "", nil, 65536)
+	}
+	jsonReply(w, 200, map[string]bool{"deleted": true})
 }

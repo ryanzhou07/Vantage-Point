@@ -6,21 +6,40 @@ export type SessionView = { state: SessionState; server_time: string; session: {
 export type JoinView = {
   state: 'ACTIVE'; server_time: string; session: { id: string; expires_at: string };
   receipt: { merchant: string; currency: string }; participants: { id: string; name: string }[]; participant?: { id: string; name: string };
+  items?: { id: string; name: string; amount_minor: number; claimed_by: string }[];
 };
 
 export class JoinError extends Error {
   constructor(public code: string, message: string) { super(message); }
 }
 
-// Public participant call. The token is only ever held in memory/URL fragment, never logged or stored.
-export async function joinRequest(token: string, participantId?: string): Promise<JoinView> {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'}/api/v1/split/session`, {
+const apiURL = () => process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+
+async function publicPost(path: string, payload: object) {
+  const response = await fetch(`${apiURL()}/api/v1/split/${path}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
-    body: JSON.stringify({ token, participant_id: participantId }), signal: AbortSignal.timeout(15000),
+    body: JSON.stringify(payload), signal: AbortSignal.timeout(15000),
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new JoinError(String(body.error?.code ?? 'UNAVAILABLE'), response.status === 401 ? 'expired' : 'unavailable');
-  return body as JoinView;
+  if (!response.ok) {
+    const code = String(body.error?.code ?? 'UNAVAILABLE');
+    throw new JoinError(code, response.status === 401 ? 'expired' : response.status === 409 && code === 'SPLIT_CLAIM_CONFLICT' ? 'conflict' : String(body.error?.message ?? 'unavailable'));
+  }
+  return body;
+}
+
+// Public participant calls. The token is only ever held in memory/URL fragment, never logged or stored.
+// A typed name (with no participant id) joins as a new receipt-scoped participant.
+export async function joinRequest(token: string, participantId?: string, name?: string): Promise<JoinView> {
+  return publicPost('session', { token, participant_id: participantId, name }) as Promise<JoinView>;
+}
+
+export async function claimRequest(token: string, participantId: string, itemId: string, release: boolean): Promise<void> {
+  await publicPost('claim', { token, participant_id: participantId, item_id: itemId, release });
+}
+
+export function formatMoney(minor: number): string {
+  return `$${Math.floor(minor / 100)}.${String(minor % 100).padStart(2, '0')}`;
 }
 
 export function formatRemaining(ms: number): string {

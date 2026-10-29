@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReceiptWorkspace } from './ReceiptWorkspace';
 import { ReceiptEditor } from './ReceiptEditor';
+import { DashboardProfileContext } from '../../components/dashboard/profile-context';
 import { receiptRequest } from './api';
 import { initialDraft, type Receipt } from './types';
 
@@ -11,7 +12,7 @@ const fixture: Receipt = {
   id: 'receipt-one', status: 'NEEDS_REVIEW', version: 3, created_at: '2026-10-15', error_code: null, retries: 0, draft: null, preview: null,
   proposal: { merchant: 'Synthetic cafe', date: '', currency: 'USD', items: [{ id: 'meal', name: 'Meal', quantity: 1, amount_minor: 1000, participant_id: '' }], subtotal_minor: 1000, tax_minor: 80, tip_minor: 200, discount_minor: 0, total_minor: 1280 },
 };
-beforeEach(() => { vi.mocked(receiptRequest).mockReset(); });
+beforeEach(() => { vi.mocked(receiptRequest).mockReset(); localStorage.clear(); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe('owner receipt review', () => {
@@ -37,16 +38,29 @@ describe('owner receipt review', () => {
       return saved as never;
     });
     render(<ReceiptWorkspace />);
-    await waitFor(() => expect(screen.getAllByRole('option').length).toBe(2));
-    fireEvent.change(screen.getByLabelText('Recent drafts (latest 20)'), { target: { value: fixture.id } });
+    await waitFor(() => expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id)); // opens the active receipt without a click
     await screen.findByRole('heading', { name: 'Saved draft split preview' });
     expect(screen.getByText(/Nobody has confirmed/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit receipt details' }));
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Reviewed cafe' } });
-    expect(screen.queryByRole('heading', { name: 'Saved draft split preview' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Verify and calculate draft split' }));
-    await screen.findByText('Owner-reviewed draft preview saved.');
+    fireEvent.change(screen.getByLabelText('Receipt date (YYYY-MM-DD)'), { target: { value: '2026-10-15' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm receipt and continue' }));
+    await screen.findByText(/Receipt confirmed/);
     const request = vi.mocked(receiptRequest).mock.calls.find(([path, init]) => path.endsWith('/review') && init?.method === 'POST');
-    expect(JSON.parse(request![1]!.body as string)).toMatchObject({ version: 4, calculate: true, draft: { merchant: 'Reviewed cafe' } });
+    expect(JSON.parse(request![1]!.body as string)).toMatchObject({ version: 4, calculate: false, draft: { merchant: 'Reviewed cafe', date: '2026-10-15' } });
+  });
+
+  it('lists every missing field and blocks confirming until the form is complete', async () => {
+    vi.mocked(receiptRequest).mockImplementation(async (path) => path === '' ? { receipts: [fixture] } as never : fixture as never);
+    render(<ReceiptWorkspace />);
+    await screen.findByLabelText('Merchant');
+    const confirm = screen.getByRole('button', { name: 'Confirm receipt and continue' }) as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+    const alert = screen.getByRole('alert').textContent!;
+    expect(alert).toMatch(/Receipt date is missing/);
+    expect(alert).toMatch(/Choose how tax is split/);
+    expect(alert).toMatch(/Choose how tip is split/);
+    expect(vi.mocked(receiptRequest).mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
   });
 
   it('surfaces conflicts while preserving unsaved corrections', async () => {
@@ -56,8 +70,7 @@ describe('owner receipt review', () => {
       throw new Error('This receipt changed. Reload before saving.');
     });
     render(<ReceiptWorkspace />);
-    await waitFor(() => expect(screen.getAllByRole('option').length).toBe(2));
-    fireEvent.change(screen.getByLabelText('Recent drafts (latest 20)'), { target: { value: fixture.id } });
+    await waitFor(() => expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id)); // opens the active receipt without a click
     await screen.findByLabelText('Merchant');
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'My correction' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
@@ -69,8 +82,7 @@ describe('owner receipt review', () => {
     const failed = { ...fixture, status: 'PROCESSING_FAILED' as const, proposal: null, error_code: 'VISION_ACCESS_REQUIRED' };
     vi.mocked(receiptRequest).mockImplementation(async (path) => path === '' ? { receipts: [failed] } as never : failed as never);
     render(<ReceiptWorkspace />);
-    await waitFor(() => expect(screen.getAllByRole('option').length).toBe(2));
-    fireEvent.change(screen.getByLabelText('Recent drafts (latest 20)'), { target: { value: fixture.id } });
+    await waitFor(() => expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id)); // opens the active receipt without a click
     await screen.findByText(/Gemini 3.5 Flash-Lite access was denied/);
     expect(vi.mocked(receiptRequest).mock.calls.some(([path]) => path.endsWith('/retry'))).toBe(false);
     expect(screen.getByRole('button', { name: 'Retry extraction (2 remaining)' })).toBeTruthy();
@@ -79,8 +91,7 @@ describe('owner receipt review', () => {
     vi.mocked(receiptRequest).mockImplementation(async (path) => path === '' ? { receipts: [fixture] } as never : fixture as never);
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<ReceiptWorkspace />);
-    await waitFor(() => expect(screen.getAllByRole('option').length).toBe(2));
-    fireEvent.change(screen.getByLabelText('Recent drafts (latest 20)'), { target: { value: fixture.id } });
+    await waitFor(() => expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id)); // opens the active receipt without a click
     await screen.findByLabelText('Merchant');
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Unsaved receipt A correction' } });
     const before = vi.mocked(receiptRequest).mock.calls.length;
@@ -98,12 +109,38 @@ describe('owner receipt review', () => {
     const recovered = { ...fixture, error_code: 'LEGACY_REVIEW_REQUIRED' };
     vi.mocked(receiptRequest).mockImplementation(async (path) => path === '' ? { receipts: [recovered] } as never : recovered as never);
     render(<ReceiptWorkspace />);
-    await waitFor(() => expect(screen.getAllByRole('option').length).toBe(2));
-    fireEvent.change(screen.getByLabelText('Recent drafts (latest 20)'), { target: { value: fixture.id } });
+    await waitFor(() => expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id)); // opens the active receipt without a click
     await screen.findByText('Review the date, split methods and item assignments before calculating this recovered draft.');
     expect((screen.getByLabelText('Receipt date (YYYY-MM-DD)') as HTMLInputElement).value).toBe('');
     expect(screen.queryByRole('heading', { name: 'Saved draft split preview' })).toBeNull();
     expect((screen.getByLabelText('Merchant') as HTMLInputElement).value).toBe('Synthetic cafe');
   });
 
+
+  it('deletes the open receipt after confirmation and clears it from the page', async () => {
+    vi.mocked(receiptRequest).mockImplementation(async (path, init) => {
+      if (path === '') return { receipts: [fixture] } as never;
+      if (init?.method === 'DELETE') return { deleted: true } as never;
+      return fixture as never;
+    });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<ReceiptWorkspace />);
+    await waitFor(() => expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete receipt' }));
+    await screen.findByText('Receipt deleted.');
+    expect(vi.mocked(receiptRequest)).toHaveBeenCalledWith(`/${fixture.id}`, { method: 'DELETE' });
+    expect(screen.queryByRole('button', { name: 'Delete receipt' })).toBeNull();
+    expect(localStorage.getItem('vp-active-receipt')).toBeNull();
+  });
+
+  it('adds the signed-in owner as a locked participant and saves the owner flag', async () => {
+    const profile = { id: 'u1', display_name: 'Ada Lovelace', email: 'ada@example.test', avatar_url: '', created_at: '', updated_at: '' };
+    vi.mocked(receiptRequest).mockImplementation(async (path) => path === '' ? { receipts: [fixture] } as never : fixture as never);
+    render(<DashboardProfileContext.Provider value={profile}><ReceiptWorkspace /></DashboardProfileContext.Provider>);
+    const name = await screen.findByLabelText('You (owner, locked)') as HTMLInputElement;
+    expect(name.value).toBe('Ada Lovelace');
+    expect(name.readOnly).toBe(true);
+    expect(screen.queryByRole('button', { name: /Remove participant 1/ })).toBeNull();
+    expect(screen.queryByText(/Unsaved changes/)).toBeNull();
+  });
 });

@@ -13,7 +13,7 @@ export function ReceiptEditor({ draft, disabled, onChange }: Props) {
 
   return (
     <fieldset disabled={disabled} className={styles.editor}>
-      <legend>Review and assign your receipt</legend>
+      <legend>Review your receipt</legend>
       <p>Extraction is a proposal. Check the image and correct every line. Enter complete line amounts in cents; quantity is descriptive.</p>
       <div className={styles.fields}>
         <label>Merchant<input maxLength={200} value={draft.merchant} onChange={(event) => update({ merchant: event.target.value })} /></label>
@@ -22,24 +22,25 @@ export function ReceiptEditor({ draft, disabled, onChange }: Props) {
       </div>
 
       <h3>Participants</h3>
-      <p>Included participants share tax/tip by your chosen method. Anyone assigned an item must be included.</p>
+      <p>Included participants share tax/tip by your chosen method. Anyone who claims an item must be included.</p>
       {draft.participants.map((participant, index) => (
         <div className={styles.person} key={participant.id}>
-          <label>Participant {index + 1}<input required maxLength={100} value={participant.name} onChange={(event) => person(participant.id, { name: event.target.value })} /></label>
-          <label className={styles.check}><input type="checkbox" checked={participant.included} onChange={(event) => person(participant.id, { included: event.target.checked })} />Included</label>
-          <Button variant="secondary" onClick={() => update({ participants: draft.participants.filter((value) => value.id !== participant.id), items: draft.items.map((value) => value.participant_id === participant.id ? { ...value, participant_id: '' } : value) })}>Remove participant {index + 1}</Button>
+          <label>{participant.is_owner ? 'You (owner, locked)' : `Participant ${index + 1}`}<input required maxLength={100} readOnly={participant.is_owner} value={participant.name} onChange={(event) => person(participant.id, { name: event.target.value })} /></label>
+          <label className={styles.check}><input type="checkbox" disabled={participant.is_owner} checked={participant.included} onChange={(event) => person(participant.id, { included: event.target.checked })} />Included</label>
+          {!participant.is_owner && <Button variant="secondary" onClick={() => update({ participants: draft.participants.filter((value) => value.id !== participant.id), items: draft.items.map((value) => value.participant_id === participant.id ? { ...value, participant_id: '' } : value) })}>Remove participant {index + 1}</Button>}
         </div>
       ))}
       <Button variant="secondary" disabled={draft.participants.length >= 40} onClick={() => update({ participants: [...draft.participants, { id: crypto.randomUUID(), name: '', included: true }] })}>Add participant</Button>
 
       <h3>Whole item lines</h3>
+      <p>You do not assign items. Start a split session and everyone, including you, joins from the link and claims their own items.</p>
       {draft.items.map((line, index) => (
         <fieldset className={styles.line} key={line.id}>
           <legend>Item {index + 1}</legend>
           <label>Name<input required maxLength={200} value={line.name} onChange={(event) => item(line.id, { name: event.target.value })} /></label>
           <label>Quantity<input type="number" min="1" max="1000" step="1" required value={line.quantity} onChange={(event) => item(line.id, { quantity: event.target.valueAsNumber })} /></label>
           <Cents label="Line amount" value={line.amount_minor} onChange={(amount_minor) => item(line.id, { amount_minor })} />
-          <label>Assigned person<select value={line.participant_id} onChange={(event) => item(line.id, { participant_id: event.target.value })}><option value="">Not assigned</option>{draft.participants.map((participant) => <option key={participant.id} value={participant.id}>{participant.name || 'Unnamed participant'}</option>)}</select></label>
+          <p>Claimed by: {draft.participants.find((participant) => participant.id === line.participant_id)?.name || 'Nobody yet (people claim their own items from the share link)'}</p>
           <Button variant="secondary" onClick={() => update({ items: draft.items.filter((value) => value.id !== line.id) })}>Remove item {index + 1}</Button>
         </fieldset>
       ))}

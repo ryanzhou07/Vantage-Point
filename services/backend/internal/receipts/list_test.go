@@ -11,6 +11,8 @@ import (
 	"testing"
 )
 
+const ownerWithDebts = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+
 type fakeReceipt struct{ id, owner, created string }
 
 // listDB emulates the owner-filtered keyset query and receipt_document, recording the owner filters used.
@@ -46,6 +48,16 @@ func (f *listDB) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			out = append(out, map[string]string{"id": x.id, "created_at": x.created})
 		}
 		_ = json.NewEncoder(w).Encode(out)
+		return
+	}
+	if strings.HasSuffix(r.URL.Path, "/receivables_list") {
+		var who map[string]string
+		_ = json.NewDecoder(r.Body).Decode(&who)
+		if who["p_owner"] != ownerWithDebts {
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		_, _ = w.Write([]byte(`[{"id":"c1","status":"OWED","amount_owed_minor":500},{"id":"c2","status":"PAID","amount_owed_minor":300}]`))
 		return
 	}
 	var in map[string]string
@@ -110,5 +122,26 @@ func TestSummaryIsolationPaginationAndExactSums(t *testing.T) {
 		if code, _ := summaryCall(a, ownerA, q); code != 400 {
 			t.Fatal(q, code)
 		}
+	}
+}
+
+func TestSummaryUsesPathSegmentsAndCountsOnlyUnpaidReceivables(t *testing.T) {
+	db := &listDB{rows: []fakeReceipt{{"aaaaaaa1-0000-4000-8000-000000000001", ownerWithDebts, "2026-10-01T10:00:00+00:00"}}}
+	srv := httptest.NewServer(db)
+	defer srv.Close()
+	st, _ := NewStore(srv.URL, "key")
+	a := NewAPI(st)
+	r := httptest.NewRequest("GET", "/api/v1/receipts/summary/5", nil) // no query string: Foundation rejects them
+	w := httptest.NewRecorder()
+	a.serve(w, r, ownerWithDebts)
+	var out map[string]any
+	_ = json.Unmarshal(w.Body.Bytes(), &out)
+	if w.Code != 200 || out["limit"].(float64) != 5 || out["outstanding_minor"].(float64) != 500 {
+		t.Fatal(w.Code, out)
+	}
+	w = httptest.NewRecorder()
+	a.serve(w, httptest.NewRequest("GET", "/api/v1/receipts/summary/5/x/y", nil), ownerA)
+	if w.Code != 404 {
+		t.Fatal("extra segments", w.Code)
 	}
 }

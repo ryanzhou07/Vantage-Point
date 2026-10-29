@@ -35,9 +35,12 @@ func main() {
 	api := receipts.NewAPI(receiptStore)
 	api.TTL, api.Origin = ttl, os.Getenv("WEB_ORIGIN")
 	mux.HandleFunc("/api/v1/split/session", api.Join)
-	receiptAPI := auth.ProtectMethods(api, "GET", "POST")
+	mux.HandleFunc("/api/v1/split/claim", api.Claim)
+	receiptAPI := auth.ProtectMethods(api, "GET", "POST", "DELETE")
 	mux.Handle("/api/v1/receipts", receiptAPI)
 	mux.Handle("/api/v1/receipts/", receiptAPI)
+	mux.Handle("/api/v1/receivables", receiptAPI)
+	mux.Handle("/api/v1/receivables/", receiptAPI)
 	server := &http.Server{Addr: ":" + port, Handler: mux, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16384}
 	log.Fatal(server.ListenAndServe())
 }
