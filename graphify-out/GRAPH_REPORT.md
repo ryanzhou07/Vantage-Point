@@ -1,196 +1,254 @@
-# Graph Report - vp-006-f89  (2026-10-28)
+# Graph Report - main-run  (2026-10-29)
 
 ## Corpus Check
-- 139 files · ~55,672 words
+- 174 files · ~69,699 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 26 file(s) not represented in the graph (top: (none) 18, .css 4, .toml 2)
+- Unclassified: 29 file(s) not represented in the graph (top: (none) 17, .css 6, .log 2)
 
 ## Summary
-- 666 nodes · 1385 edges · 31 communities (23 shown, 8 thin omitted)
-- Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 83 edges (avg confidence: 0.84)
+- 860 nodes · 1779 edges · 50 communities (31 shown, 19 thin omitted)
+- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 139 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- Go Backend Core
-- Next.js Pages & Routes
-- Dev Tooling Scripts
-- Task & Report Docs
-- Auth Middleware (Go)
+- Web Auth & Dashboard Pages
+- AWS Secrets Source
+- Receipts & Split Pages
+- Python Dev Scripts
+- Receipt Contracts
+- Task Handoff Reports
 - CI Workflow
-- Receipts UI & Shared UI
+- Banking Secrets ADR & Agent Rules
 - Web Dependencies
-- Receipt Domain Models
-- Dashboard Shell
-- Root Workspace Config
+- Backend Identity & Receipts Store
+- Foundation & Frontend Contracts
+- Go Stdlib Usage
+- Root Package Config
+- Dashboard Section Routing
+- ADR & Teller Task Docs
+- JWT & HTTP Test Doubles
 - TypeScript Config
-- Auth & UI Contracts
-- Receipt Money Rules
-- Community 14
-- Community 15
-- Community 16
-- Community 17
-- Community 18
-- Community 19
-- Community 20
-- Community 21
-- Community 22
-- Community 23
-- Community 24
+- Receipt Join Tests
+- Token Keyring Encryption
+- Local Secret Source
+- Gemini Provider Errors
+- Image Validation
+- Receipt List Tests
+- API Entrypoint
+- Project Specs
 - Community 25
 - Community 26
 - Community 27
 - Community 28
 - Community 29
 - Community 30
+- Community 31
+- Community 32
+- Community 33
+- Community 34
+- Community 35
+- Community 36
+- Community 37
+- Community 38
+- Community 39
+- Community 40
+- Community 41
+- Community 42
+- Community 43
+- Community 44
+- Community 45
+- Community 46
+- Community 47
 
 ## God Nodes (most connected - your core abstractions)
-1. `ReceiptWorkspace()` - 17 edges
-2. `react` - 17 edges
-3. `VP-008 Receipt image to split preview (COMPLETED)` - 17 edges
+1. `react` - 21 edges
+2. `ReceiptWorkspace()` - 18 edges
+3. `API` - 18 edges
 4. `compilerOptions` - 16 edges
-5. `AGENTS.md Agent Rules` - 16 edges
-6. `DESIGN.md Technical Design` - 16 edges
-7. `scripts` - 14 edges
-8. `Calculate()` - 13 edges
-9. `PROJECT.md MVP 1 Specification` - 13 edges
-10. `Implementation coordination` - 13 edges
+5. `VP-008 Receipt image to split preview (COMPLETED)` - 16 edges
+6. `Button()` - 15 edges
+7. `Store` - 15 edges
+8. `scripts` - 14 edges
+9. `VP-018 Plaid Banking provider (replaces Teller)` - 14 edges
+10. `Feedback()` - 13 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Integer minor-unit money` --semantically_similar_to--> `Largest-remainder tax/tip distribution`  [INFERRED] [semantically similar]
-  DESIGN.md → agents/contracts/RECEIPT_DRAFTS.md
-- `VP-006 M1 Review (APPROVED)` --implements--> `Integration / Review agent`  [INFERRED]
-  agents/reports/VP-006-M1-review.md → AGENTS.md
-- `Extractor interface (provider-neutral)` --implements--> `Provider adapter boundary rule`  [INFERRED]
-  agents/contracts/RECEIPT_DRAFTS.md → AGENTS.md
-- `Migration ownership README` --references--> `VP-002 Local Supabase, migrations, CI (COMPLETED)`  [INFERRED]
-  supabase/migrations/README.md → agents/tasks/completed/VP-002.md
-- `Foundation Auth Contract` --references--> `DESIGN.md Technical Design`  [EXTRACTED]
-  agents/contracts/FOUNDATION_AUTH.md → DESIGN.md
+- `Domain ownership rule` --semantically_similar_to--> `Seven domain boundary rules`  [INFERRED] [semantically similar]
+  AGENTS.md → agents/decisions/ADR-010-modular-monolith-split-strategy.md
+- `Architecture change escalation` --references--> `ADR-011 Replace Teller with Plaid`  [INFERRED]
+  AGENTS.md → agents/decisions/ADR-011-replace-teller-with-plaid.md
+- `Technology stack (Next.js, Go, Supabase)` --conceptually_related_to--> `ADR-011 Replace Teller with Plaid`  [AMBIGUOUS]
+  DESIGN.md → agents/decisions/ADR-011-replace-teller-with-plaid.md
+- `ADR-010 Modular monolith, service split later` --references--> `Modular monolith backend`  [INFERRED]
+  agents/decisions/ADR-010-modular-monolith-split-strategy.md → DESIGN.md
+- `Banking credentials and secrets handling` --references--> `ADR-009 Banking secrets and token encryption`  [INFERRED]
+  PROJECT.md → agents/decisions/ADR-009-banking-secrets-and-token-encryption.md
 
 ## Import Cycles
 - None detected.
 
 ## Hyperedges (group relationships)
-- **Governance doc hierarchy (PROJECT, DESIGN, AGENTS, authority order)** — project_md, design_md, agents_md, agents_md_authority_order [EXTRACTED 1.00]
-- **Teller Banking task chain VP-009 to VP-011** — agents_tasks_backlog_vp_009, agents_tasks_backlog_vp_010, agents_tasks_backlog_vp_011 [EXTRACTED 1.00]
-- **VP-006 sequential milestones M1-M4** — concept_vp_006_m1, concept_vp_006_m2, concept_vp_006_m3, concept_vp_006_m4 [EXTRACTED 1.00]
-- **VP-007 Settings and callback package** — agents_tasks_ready_vp_007, agents_reports_vp_007_dashboard, agents_reports_vp_007_foundation [EXTRACTED 1.00]
-- **Foundation auth flow (PKCE, useAuthSession, Protect, /me)** — agents_contracts_foundation_auth_pkce, agents_contracts_frontend_components_use_auth_session, agents_contracts_foundation_auth_protect, agents_contracts_foundation_auth_me_endpoint, provider_supabase [INFERRED 0.95]
-- **Receipt vision pipeline (API, durable job queue, worker, Extractor, Gemini)** — agents_contracts_receipt_drafts_api, agents_contracts_receipt_drafts_vision_jobs, agents_guides_receipt_setup_receipt_worker, agents_contracts_receipt_drafts_extractor, provider_gemini [INFERRED 0.95]
+- **Banking provider secrets and token handling** — agents_decisions_adr_009_banking_secrets_and_token_encryption_secret_source, agents_decisions_adr_009_banking_secrets_and_token_encryption_aes_gcm, design_institution_connections, project_banking_secrets [INFERRED 0.85]
+- **Receipt split session lifecycle and access** — agents_contracts_receipt_sessions_session_endpoints, agents_contracts_receipt_sessions_public_join, agents_contracts_receipt_sessions_split_sessions_schema, agents_contracts_receipt_sessions_realtime_broadcast, design_split_sessions_table [INFERRED 0.95]
+- **Agent governance documents** — agents, agents_authority_order, agents_task_lifecycle, agents_tasks_coordination_subagent_protocol, agents_git_workflow [INFERRED 0.85]
+- **Banking tasks reworked by Plaid switch** — agents_tasks_backlog_vp_009c, agents_tasks_backlog_vp_010, agents_tasks_backlog_vp_011, agents_tasks_backlog_vp_018_plaid_banking [EXTRACTED 1.00]
+- **Receipt stack VP-015a, VP-015b, VP-016** — agents_tasks_review_vp_015a, agents_tasks_review_vp_015b, agents_tasks_review_vp_016 [EXTRACTED 1.00]
 
-## Communities (31 total, 8 thin omitted)
+## Communities (50 total, 19 thin omitted)
 
-### Community 0 - "Go Backend Core"
-Cohesion: 0.06
-Nodes (39): identityKey, Profile, ProviderError, rateEntry, testExtractor, main(), main(), main() (+31 more)
-
-### Community 1 - "Next.js Pages & Routes"
+### Community 0 - "Web Auth & Dashboard Pages"
 Cohesion: 0.06
 Nodes (51): Callback(), DashboardLayout(), SettingsPage(), Home(), DashboardShell(), handleSignOut(), mocks, renderShell() (+43 more)
 
-### Community 2 - "Dev Tooling Scripts"
-Cohesion: 0.08
-Nodes (14): import_private(), primary_root(), read_private(), candidates(), pins(), validate(), main(), read_private() (+6 more)
+### Community 1 - "AWS Secrets Source"
+Cohesion: 0.06
+Nodes (32): AWSSource, cached, fakeSM, SecretsManagerAPI, API, Profile, API, Extractor (+24 more)
 
-### Community 3 - "Task & Report Docs"
+### Community 2 - "Receipts & Split Pages"
 Cohesion: 0.07
-Nodes (55): VP-007 Dashboard handoff report, VP-007 Foundation handoff report, VP-008 final review record, VP-008 receipt extraction options research, VP-004 Readable reusable auth UI (ACTIVE), VP-005 Authenticated Dashboard and MVP navigation (ACTIVE), VP-006 Safe local dev configuration and startup (ACTIVE), VP-006 M2 Pinned tool discovery (ACTIVE) (+47 more)
+Nodes (44): ReceiptsPage(), metadata, SplitPage(), Button(), ButtonProps, authorizedFetch(), postJSON(), receiptImage() (+36 more)
 
-### Community 4 - "Auth Middleware (Go)"
-Cohesion: 0.10
-Nodes (18): API, API, Extractor, FakeVision, Gemini, Job, Record, Store (+10 more)
+### Community 3 - "Python Dev Scripts"
+Cohesion: 0.08
+Nodes (11): import_private(), primary_root(), read_private(), main(), read_private(), request(), verify(), DevConfigurationTests (+3 more)
 
-### Community 5 - "CI Workflow"
+### Community 4 - "Receipt Contracts"
+Cohesion: 0.04
+Nodes (47): Receipt list contract (VP-016), amount_kind (DRAFT_PREVIEW/NONE), outstanding_minor (finalized receivables only), GET /api/v1/receipts/summary, Receipt split-session contract (VP-015a/b), Store.CheckSession participant gate, POST /api/v1/split/session public join endpoint, Payload-free realtime broadcast split:<session id> (+39 more)
+
+### Community 5 - "Task Handoff Reports"
+Cohesion: 0.07
+Nodes (47): VP-007 Dashboard handoff report, VP-007 Foundation handoff report, VP-008 final review record, VP-008 receipt extraction options research, VP-004 Readable reusable auth UI (ACTIVE), VP-005 Authenticated Dashboard and MVP navigation (ACTIVE), VP-006 Safe local dev configuration and startup (ACTIVE), VP-006 M2 Pinned tool discovery (ACTIVE) (+39 more)
+
+### Community 6 - "CI Workflow"
 Cohesion: 0.05
 Nodes (43): name, runs-on, steps, timeout-minutes, concurrency, cancel-in-progress, group, name (+35 more)
 
-### Community 6 - "Receipts UI & Shared UI"
-Cohesion: 0.13
-Nodes (26): ReceiptsPage(), Button(), ButtonProps, authorizedFetch(), postJSON(), receiptImage(), receiptRequest(), Cents() (+18 more)
+### Community 7 - "Banking Secrets ADR & Agent Rules"
+Cohesion: 0.06
+Nodes (39): Architecture change escalation, Banking agent, ADR-009 Banking secrets and token encryption, AES-256-GCM per-user token encryption, SecretSource interface (local files / AWS Secrets Manager), SyncConnection manual refresh with cooldown, ADR-010 Modular monolith, service split later, Seven domain boundary rules (+31 more)
 
-### Community 7 - "Web Dependencies"
+### Community 8 - "Web Dependencies"
 Cohesion: 0.07
-Nodes (35): dependencies, next@16.4.0, react@19.3.0, react-dom@19.3.0, @supabase/supabase-js@^2.117.3, devDependencies, eslint@9.39.5, eslint-config-next@16.4.0 (+27 more)
+Nodes (38): dependencies, next@16.4.1, qrcode-generator@2.0.4, react@19.3.0, react-dom@19.3.0, @supabase/supabase-js@^2.117.3, devDependencies, eslint@9.39.5 (+30 more)
 
-### Community 8 - "Receipt Domain Models"
+### Community 9 - "Backend Identity & Receipts Store"
 Cohesion: 0.14
-Nodes (18): Draft, Item, Participant, Preview, Proposal, Share, bounded(), Calculate() (+10 more)
+Nodes (5): identityKey, shareRow, SummaryRow, main(), summarize()
 
-### Community 9 - "Dashboard Shell"
+### Community 10 - "Foundation & Frontend Contracts"
+Cohesion: 0.09
+Nodes (32): Foundation Auth Contract, GET /api/v1/me endpoint, Supabase PKCE bearer-only auth flow, Frontend Components Contract, Receipt Drafts Contract, Receipt draft HTTP API (/api/v1/receipts), Largest-remainder tax/tip distribution, Private receipt-images bucket (+24 more)
+
+### Community 11 - "Go Stdlib Usage"
+Cohesion: 0.12
+Nodes (19): Draft, Item, Participant, Preview, Proposal, Share, testExtractor, bounded() (+11 more)
+
+### Community 12 - "Root Package Config"
+Cohesion: 0.08
+Nodes (26): devDependencies, supabase@2.120.0, engines, node, name, undici@8.11.2, zod@4.6.5, packageManager (+18 more)
+
+### Community 13 - "Dashboard Section Routing"
 Cohesion: 0.19
 Nodes (12): DashboardPage(), DashboardSectionPage(), metadata, DashboardNavigation(), NavigationGroup(), FeatureUnavailable(), DashboardDestination, destinationFor() (+4 more)
 
-### Community 10 - "Root Workspace Config"
-Cohesion: 0.09
-Nodes (22): devDependencies, supabase@2.120.0, engines, node, name, packageManager, private, scripts (+14 more)
+### Community 14 - "ADR & Teller Task Docs"
+Cohesion: 0.17
+Nodes (21): ADR-009 secrets and AES-256-GCM encryption, ADR-010 modular monolith import boundaries, ADR-011 Plaid replaces Teller, VP-009c Removable Teller connection probe, VP-010 Authenticated Teller connection lifecycle, VP-011 Normalized accounts and manual refresh, VP-014 Domain import-boundary CI check, VP-018 Plaid Banking provider (replaces Teller) (+13 more)
 
-### Community 11 - "TypeScript Config"
+### Community 15 - "JWT & HTTP Test Doubles"
+Cohesion: 0.26
+Nodes (13): New(), fixture(), request(), TestBoundedRemoteValidation(), TestConcurrentUsers(), TestConfigurationRejectsUnsafeTargets(), TestMismatchAnonymousAndOversizedProvider(), TestOriginAndContext() (+5 more)
+
+### Community 16 - "TypeScript Config"
 Cohesion: 0.11
 Nodes (18): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+10 more)
 
-### Community 12 - "Auth & UI Contracts"
-Cohesion: 0.19
-Nodes (14): Foundation Auth Contract, GET /api/v1/me endpoint, Supabase PKCE bearer-only auth flow, Frontend Components Contract, UI primitives (Button, Surface, Feedback, Brand), useAuthSession hook, VP-003 Evidence, VP-004 Evidence (+6 more)
-
-### Community 13 - "Receipt Money Rules"
-Cohesion: 0.19
-Nodes (13): Largest-remainder tax/tip distribution, Allocation concurrency invariant, Atomic receipt finalization, Receipt data model (receipts, items, participants, allocations, receivables), Receipt revision/reset strategy, PROJECT.md MVP 1 Specification, Receipt audit history, MVP 1 boundaries (non-goals) (+5 more)
-
-### Community 14 - "Community 14"
+### Community 17 - "Receipt Join Tests"
 Cohesion: 0.23
-Nodes (11): Temporary braces advisory exception (expires 2026-11-11), Go 1.26.9 runtime pin, ADR-002 Runtime Security Remediation, VP-002 Evidence, Integration / Review agent, Test Guidelines VP-002/VP-003, CI checks (GitHub Actions), README (dev setup, checks, CI) (+3 more)
+Nodes (8): join(), TestJoinExpiryParticipantsAndNoOwnerLeak(), TestJoinRateLimitedAndCORS(), call(), sessionAPI(), TestSessionCreationRateLimitedAndTTLConfig(), TestSessionExpiryTokenReplacementAndNoRawToken(), TestSessionOwnerOnlyAndClose()
 
-### Community 15 - "Community 15"
-Cohesion: 0.35
-Nodes (11): Receipt Drafts Contract, Extractor interface (provider-neutral), ADR-008 Receipt Vision Provider Boundary, VP-008 Evidence, Gemini Receipt Setup Guide, Live synthetic Gemini smoke (receipt-command.py), VP-008 Implementation Plan, Receipts domain (+3 more)
+### Community 18 - "Token Keyring Encryption"
+Cohesion: 0.20
+Nodes (9): Keyring, aad(), NewKeyring(), LoadKeyring(), key(), ring(), TestKeyringFailsClosed(), TestNonceUnique() (+1 more)
 
-### Community 16 - "Community 16"
+### Community 19 - "Local Secret Source"
+Cohesion: 0.20
+Nodes (7): LocalSource, SecretSource, DefaultLocalDir(), NewAWSSource(), NewSecretSource(), TestLocalPermissions(), TestNewSecretSourceFailsClosed()
+
+### Community 20 - "Gemini Provider Errors"
+Cohesion: 0.20
+Nodes (11): ProviderError, geminiFailure(), NewGemini(), proposalSchema(), TestGeminiBadRequestFieldPathsAreWhitelisted(), TestGeminiFailureBounds(), TestGeminiModelSchemaUsesVerifiedWireContract(), TestGeminiNoKeyAndCancelled() (+3 more)
+
+### Community 21 - "Image Validation"
 Cohesion: 0.22
-Nodes (10): receipt_vision_jobs durable leased queue, Receipt vision worker process, DESIGN.md Technical Design, API error shape and HTTP conventions, Banking data model (connections, accounts, transactions, provider_events), User-scoped caching policy, Future ledger engine (deferred), Modular monolith Go backend (+2 more)
+Nodes (7): NewAPI(), pngFixture(), TestImagesContentAndLimits(), TestJSONBoundsAndUnknownFields(), TestReceiptHandlerCannotBypassFoundation(), TestReceiptRateLimiterBoundAndExpiry(), ValidateImage()
 
-### Community 17 - "Community 17"
-Cohesion: 0.29
-Nodes (7): AGENTS.md Agent Rules, Orchestrator agent, Task lifecycle (BACKLOG..COMPLETED, BLOCKED), Banking domain, Tech stack (Next.js, Go, Supabase, Teller/Plaid), Plaid (secondary banking provider), Teller (primary banking provider)
+### Community 22 - "Receipt List Tests"
+Cohesion: 0.32
+Nodes (4): fakeReceipt, listDB, summaryCall(), TestSummaryIsolationPaginationAndExactSums()
 
-### Community 19 - "Community 19"
-Cohesion: 0.40
-Nodes (5): VP-006 M1 Evidence, scripts/dev_config.py parser, VP-006 M1 Review (APPROVED), VP-006 Local dev startup, VP-006 M1 private configuration contract
+### Community 23 - "API Entrypoint"
+Cohesion: 0.33
+Nodes (5): main(), main(), ParseSessionTTL(), NewStore(), TestWorkerOneDeliveryFinishesOrSchedulesBoundedRetry()
 
-### Community 20 - "Community 20"
-Cohesion: 0.40
-Nodes (5): foundation.API.Protect middleware, Receipt draft HTTP API (/api/v1/receipts), Private receipt-images bucket, Supabase Realtime (non-authoritative), Supabase (Auth, Postgres, Storage, Realtime)
+### Community 24 - "Project Specs"
+Cohesion: 0.50
+Nodes (4): AGENTS.md Agent Rules, Credit optimization and local validation, DESIGN.md Technical Design, PROJECT.md Vision and MVP 1 Spec
 
-### Community 21 - "Community 21"
+### Community 25 - "Community 25"
 Cohesion: 0.50
 Nodes (4): GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, run_cli(), local-db.sh script
 
-### Community 22 - "Community 22"
+### Community 26 - "Community 26"
 Cohesion: 0.60
 Nodes (3): apply_files(), new_database(), test-receipt-migration.sh script
 
-### Community 23 - "Community 23"
+### Community 27 - "Community 27"
+Cohesion: 0.67
+Nodes (4): VP-006 M1 Evidence, VP-006 M1 Review (APPROVED), VP-006 Local dev startup, VP-006 M1 private configuration contract
+
+### Community 28 - "Community 28"
 Cohesion: 0.83
 Nodes (3): cleanup(), test-profile-concurrency.sh script, sql()
 
+### Community 29 - "Community 29"
+Cohesion: 0.67
+Nodes (3): Traffic protection rules, Caching strategy (user-scoped), Traffic protection architecture
+
+### Community 30 - "Community 30"
+Cohesion: 0.67
+Nodes (3): Authentication flow (Google, Supabase Auth, JWT, ctx.user_id), profiles table, Single Vantage-Point user identity
+
+## Ambiguous Edges - Review These
+- `Technology stack (Next.js, Go, Supabase)` → `ADR-011 Replace Teller with Plaid`  [AMBIGUOUS]
+  DESIGN.md · relation: conceptually_related_to
+- `ADR-011 Replace Teller with Plaid` → `Banking/Teller plan 2026-10-28`  [AMBIGUOUS]
+  agents/tasks/COORDINATION.md · relation: conceptually_related_to
+
 ## Knowledge Gaps
-- **27 isolated node(s):** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `github.com/ryanzhou07/Vantage-Point/services/backend`, `VP-003 Evidence`, `VP-004 Evidence` (+22 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 174 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **8 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **77 isolated node(s):** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `github.com/ryanzhou07/Vantage-Point/services/backend`, `Orchestrator agent`, `Foundation agent` (+72 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 246 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **19 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `react` connect `Next.js Pages & Routes` to `Dashboard Shell`, `Receipts UI & Shared UI`, `Web Dependencies`?**
-  _High betweenness centrality (0.023) - this node is a cross-community bridge._
+- **Why does `react` connect `Web Auth & Dashboard Pages` to `Web Dependencies`, `Receipts & Split Pages`, `Dashboard Section Routing`?**
+  _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **What connects `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `github.com/ryanzhou07/Vantage-Point/services/backend` to the rest of the system?**
-  _27 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Go Backend Core` be split into smaller, more focused modules?**
-  _Cohesion score 0.05967540574282147 - nodes in this community are weakly interconnected._
-- **Why does `vitest` connect `Next.js Pages & Routes` to `Dashboard Shell`, `Receipts UI & Shared UI`, `Web Dependencies`?**
-  _High betweenness centrality (0.011) - this node is a cross-community bridge._
-- **Should `Next.js Pages & Routes` be split into smaller, more focused modules?**
-  _Cohesion score 0.0560875512995896 - nodes in this community are weakly interconnected._
-- **Why does `next` connect `Dashboard Shell` to `Next.js Pages & Routes`, `Web Dependencies`?**
+  _77 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Web Auth & Dashboard Pages` be split into smaller, more focused modules?**
+  _Cohesion score 0.0559244126659857 - nodes in this community are weakly interconnected._
+- **Why does `vitest` connect `Web Auth & Dashboard Pages` to `Web Dependencies`, `Receipts & Split Pages`, `Dashboard Section Routing`?**
   _High betweenness centrality (0.009) - this node is a cross-community bridge._
-- **Should `Dev Tooling Scripts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07656341320864991 - nodes in this community are weakly interconnected._
+- **Should `AWS Secrets Source` be split into smaller, more focused modules?**
+  _Cohesion score 0.06265822784810127 - nodes in this community are weakly interconnected._
+
+### Low-confidence Hints
+_AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._
+
+- **What is the exact relationship between `Technology stack (Next.js, Go, Supabase)` and `ADR-011 Replace Teller with Plaid`?**
+  _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
+- **What is the exact relationship between `ADR-011 Replace Teller with Plaid` and `Banking/Teller plan 2026-10-28`?**
+  _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
