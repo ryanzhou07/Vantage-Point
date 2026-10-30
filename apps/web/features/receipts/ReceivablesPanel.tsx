@@ -24,17 +24,21 @@ function fromURL(): Filters {
   return { q: p.get('q') ?? '', status: status === 'OWED' || status === 'PAID' ? status : '', from: p.get('from') ?? '', to: p.get('to') ?? '' };
 }
 const same = (a: Filters, b: Filters) => (a.q.trim().length >= 2 ? a.q.trim() : '') === (b.q.trim().length >= 2 ? b.q.trim() : '') && a.status === b.status && a.from === b.from && a.to === b.to;
-// Only short filter text goes in the URL; cursors never do.
-function query(f: Filters, cursor = ''): string {
+// The page URL mirrors short filter text only (never cursors). The API call is a POST body: the shared
+// auth middleware rejects URL query strings, and a body keeps search text out of request logs.
+function pageQuery(f: Filters): string {
   const p = new URLSearchParams();
   if (f.q.trim().length >= 2) p.set('q', f.q.trim());
   if (f.status) p.set('status', f.status);
   if (f.from) p.set('from', f.from);
   if (f.to) p.set('to', f.to);
-  p.set('limit', '25');
-  if (cursor) p.set('cursor', cursor);
-  return `?${p.toString()}`;
+  return p.size ? `?${p.toString()}` : '';
 }
+const searchBody = (f: Filters, cursor = '') => ({
+  ...(f.q.trim().length >= 2 && { q: f.q.trim() }), ...(f.status && { status: f.status }), ...(f.from && { from: f.from }), ...(f.to && { to: f.to }),
+  limit: 25, ...(cursor && { cursor }),
+});
+const search = (f: Filters, cursor = '', init: RequestInit = {}) => receivablesRequest<Page>('/search', { ...postJSON(searchBody(f, cursor)), ...init });
 
 // Receivables with filters and paging: the backend decides rows, totals and order; this only shows them and flips PAID/OWED.
 export function ReceivablesPanel() {
@@ -70,12 +74,11 @@ export function ReceivablesPanel() {
   }, [input, rangeError, applied]);
   useEffect(() => {
     const controller = new AbortController();
-    receivablesRequest<Page>(query(applied), { signal: controller.signal })
+    search(applied, '', { signal: controller.signal })
       .then((body) => {
         if (!mounted.current || controller.signal.aborted) return;
         setRows(body.receivables); setOutstanding(body.outstanding_minor); setCursor(body.next_cursor); setPhase('ready');
-        const url = `${window.location.pathname}${query(applied).replace(/&?limit=25/, '').replace(/^\?$/, '')}`;
-        window.history.replaceState(null, '', url);
+        window.history.replaceState(null, '', `${window.location.pathname}${pageQuery(applied)}`);
       })
       .catch(() => { if (mounted.current && !controller.signal.aborted) setPhase('error'); });
     return () => controller.abort();
@@ -87,7 +90,7 @@ export function ReceivablesPanel() {
   async function loadMore() {
     setMore(true); setError('');
     try {
-      const body = await receivablesRequest<Page>(query(applied, cursor));
+      const body = await search(applied, cursor);
       if (!mounted.current) return;
       const seen = new Set(rows.map((r) => r.id));
       const fresh = body.receivables.filter((r) => !seen.has(r.id));

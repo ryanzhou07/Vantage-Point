@@ -35,26 +35,35 @@ func TestMarkPaidNeedsPaidNotVersion(t *testing.T) {
 	}
 }
 
-// VP-023: filters are validated and bounded before they reach the database.
-func TestReceivableListQueryValidation(t *testing.T) {
+// VP-023: filters are validated and bounded before they reach the database. They travel in a POST body
+// because the shared auth middleware rejects any URL query string.
+func TestReceivableSearchValidation(t *testing.T) {
 	clock := time.Now()
 	a, db := sessionAPI(t, &clock)
 	cursor := base64.RawURLEncoding.EncodeToString([]byte(`{"created_at":"2026-10-29T10:00:00Z","id":"` + rid + `"}`))
-	for query, want := range map[string]int{
-		"": 200, "?q=ab": 200, "?q=a": 400, "?q=" + strings.Repeat("x", 65): 400, "?status=PAID&from=2026-01-01&to=2026-02-01": 200,
-		"?status=BOGUS": 400, "?from=2026-13-01": 400, "?from=2026-02-01&to=2026-01-01": 400, "?from=2019-01-01&to=2026-01-01": 400,
-		"?limit=0": 400, "?limit=x": 400, "?limit=999": 200, "?cursor=garbage": 400, "?cursor=" + cursor: 200,
-		"?foo=1": 400, "?status=OWED&status=PAID": 400,
+	for body, want := range map[string]int{
+		`{}`: 200, `{"q":"ab"}`: 200, `{"q":"a"}`: 400, `{"q":"` + strings.Repeat("x", 65) + `"}`: 400,
+		`{"status":"PAID","from":"2026-01-01","to":"2026-02-01"}`: 200, `{"status":"BOGUS"}`: 400, `{"from":"2026-13-01"}`: 400,
+		`{"from":"2026-02-01","to":"2026-01-01"}`: 400, `{"from":"2019-01-01","to":"2026-01-01"}`: 400,
+		`{"limit":-1}`: 400, `{"limit":999}`: 200, `{"cursor":"garbage"}`: 400, `{"cursor":"` + cursor + `"}`: 200,
+		`{"foo":1}`: 400, `{"q":null}`: 400, `{"limit":"x"}`: 400,
 	} {
+		r := httptest.NewRequest("POST", "/api/v1/receivables/search", strings.NewReader(body))
+		r.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
-		a.receivables(w, httptest.NewRequest("GET", "/api/v1/receivables"+query, nil), ownerA)
+		a.receivables(w, r, ownerA)
 		if w.Code != want {
-			t.Errorf("query %q: got %d, want %d (%s)", query, w.Code, want, w.Body.String())
+			t.Errorf("body %s: got %d, want %d (%s)", body, w.Code, want, w.Body.String())
 		}
 	}
 	all := strings.Join(db.bodies, "")
 	if !strings.Contains(all, `"p_limit":50`) || strings.Contains(all, `"p_limit":999`) || !strings.Contains(all, `"p_owner":"`+ownerA+`"`) {
 		t.Fatalf("limit not clamped or owner not forwarded: %s", all)
+	}
+	w := httptest.NewRecorder()
+	a.receivables(w, httptest.NewRequest("GET", "/api/v1/receivables", nil), ownerA)
+	if w.Code != 200 {
+		t.Fatal("plain GET list", w.Code)
 	}
 }
 

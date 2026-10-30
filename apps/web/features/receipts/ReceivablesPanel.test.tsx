@@ -8,7 +8,8 @@ import { ReceivablesPanel } from './ReceivablesPanel';
 
 const row = (id: string, name: string, extra = {}) => ({ id, receipt_id: 'r1', merchant: 'Cafe', receipt_date: '2026-10-29', participant_name: name, amount_owed_minor: 500, status: 'OWED' as const, paid_at: null, payment_method: 'VENMO' as const, ...extra });
 const page = (rows: unknown[], next = '', outstanding = 500) => ({ receivables: rows, outstanding_minor: outstanding, next_cursor: next });
-const paths = () => vi.mocked(receivablesRequest).mock.calls.map(([path]) => path as string);
+// Searches are POST /search with a JSON body (the shared auth middleware rejects URL query strings).
+const bodies = () => vi.mocked(receivablesRequest).mock.calls.filter(([path]) => path === '/search').map(([, init]) => JSON.parse(String(init?.body)) as Record<string, string | number>);
 
 beforeEach(() => { window.history.replaceState(null, '', '/dashboard/receipts'); vi.mocked(receivablesRequest).mockReset(); });
 afterEach(cleanup);
@@ -22,8 +23,8 @@ describe('ReceivablesPanel filters and paging', () => {
     fireEvent.change(box, { target: { value: 'b' } });
     fireEvent.change(box, { target: { value: 'bo' } });
     fireEvent.change(box, { target: { value: 'bob' } });
-    await waitFor(() => expect(paths().some((p) => p.includes('q=bob'))).toBe(true));
-    expect(paths().filter((p) => p.includes('q='))).toEqual(['?q=bob&limit=25']); // one request, not one per keystroke
+    await waitFor(() => expect(bodies().some((b) => b.q === 'bob')).toBe(true));
+    expect(bodies().filter((b) => 'q' in b)).toEqual([{ q: 'bob', limit: 25 }]); // one request, not one per keystroke
     expect(window.location.search).toContain('q=bob');
     fireEvent.click(await screen.findByRole('button', { name: 'Remove filter: Search: bob' }));
     await waitFor(() => expect(window.location.search).toBe(''));
@@ -36,11 +37,11 @@ describe('ReceivablesPanel filters and paging', () => {
     fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-10' } });
     fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-10-01' } });
     await screen.findByRole('alert');
-    expect(paths().some((p) => p.includes('to=2026-10-01'))).toBe(false);
+    expect(bodies().some((b) => b.to === '2026-10-01')).toBe(false);
   });
 
   it('loads more without duplicates and keeps the backend total', async () => {
-    vi.mocked(receivablesRequest).mockImplementation(async (path) => (path as string).includes('cursor=c1') ? page([row('a', 'Bob'), row('b', 'Sam')], '', 900) as never : page([row('a', 'Bob')], 'c1') as never);
+    vi.mocked(receivablesRequest).mockImplementation(async (_path, init) => JSON.parse(String(init?.body)).cursor === 'c1' ? page([row('a', 'Bob'), row('b', 'Sam')], '', 900) as never : page([row('a', 'Bob')], 'c1') as never);
     render(<ReceivablesPanel />);
     fireEvent.click(await screen.findByRole('button', { name: 'Load more' }));
     await screen.findByText('Sam');

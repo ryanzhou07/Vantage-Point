@@ -47,9 +47,14 @@ func (a *API) receivables(w http.ResponseWriter, r *http.Request, owner string) 
 	}
 	parts := strings.Split(strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/v1/receivables"), "/"), "/")
 	switch {
-	case parts[0] == "" && r.Method == "GET":
-		args, ok := receivableQuery(w, r)
-		if !ok {
+	case (parts[0] == "" && r.Method == "GET") || (len(parts) == 1 && parts[0] == "search" && r.Method == "POST"):
+		var in receivableSearch
+		if r.Method == "POST" && !readJSON(w, r, &in, false) {
+			return
+		}
+		args, msg := receivableArgs(in)
+		if msg != "" {
+			apiError(w, 400, "INVALID_REQUEST", msg)
 			return
 		}
 		args["p_owner"] = owner
@@ -97,86 +102,71 @@ func (a *API) receivables(w http.ResponseWriter, r *http.Request, owner string) 
 	}
 }
 
-// receivableQuery validates the list filters (VP-023). Unknown parameters are rejected; the cursor is
-// opaque to clients and only ever narrows the verified owner's own rows.
-func receivableQuery(w http.ResponseWriter, r *http.Request) (map[string]any, bool) {
-	bad := func(msg string) (map[string]any, bool) {
-		apiError(w, 400, "INVALID_REQUEST", msg)
-		return nil, false
-	}
-	q := r.URL.Query()
+// receivableSearch is the POST /api/v1/receivables/search body. The shared auth middleware rejects every
+// URL query string, so filters travel in the body; empty fields mean "no filter".
+type receivableSearch struct {
+	Status string `json:"status"`
+	From   string `json:"from"`
+	To     string `json:"to"`
+	Q      string `json:"q"`
+	Limit  int    `json:"limit"`
+	Cursor string `json:"cursor"`
+}
+
+// receivableArgs validates and bounds the filters (VP-023). The cursor is opaque to clients and only
+// ever narrows the verified owner's own rows. It returns a client-safe message when input is invalid.
+func receivableArgs(in receivableSearch) (map[string]any, string) {
 	args := map[string]any{"p_status": nil, "p_from": nil, "p_to": nil, "p_q": nil, "p_limit": 25, "p_cursor": nil}
-	for key, values := range q {
-		if len(values) != 1 {
-			return bad("Send each filter once.")
+	if in.Status != "" {
+		if in.Status != "OWED" && in.Status != "PAID" {
+			return nil, "Status must be OWED or PAID."
 		}
-		v := values[0]
-		switch key {
-		case "status":
-			if v != "" && v != "OWED" && v != "PAID" {
-				return bad("Status must be OWED or PAID.")
-			}
-			if v != "" {
-				args["p_status"] = v
-			}
-		case "from", "to":
-			if v == "" {
-				continue
-			}
-			if _, e := time.Parse("2006-01-02", v); e != nil {
-				return bad("Dates must look like 2026-10-29.")
-			}
-			args["p_"+key] = v
-		case "q":
-			v = strings.TrimSpace(v)
-			if v == "" {
-				continue
-			}
-			if n := utf8.RuneCountInString(v); n < 2 || n > 64 {
-				return bad("Search needs 2 to 64 characters.")
-			}
-			args["p_q"] = v
-		case "limit":
-			n := 0
-			for _, c := range v {
-				if c < '0' || c > '9' || n > 1000 {
-					return bad("Limit must be a number.")
-				}
-				n = n*10 + int(c-'0')
-			}
-			if n < 1 {
-				return bad("Limit must be at least 1.")
-			}
-			args["p_limit"] = min(n, 50)
-		case "cursor":
-			if v == "" {
-				continue
-			}
-			raw, e := base64.RawURLEncoding.DecodeString(v)
-			var c struct {
-				CreatedAt string `json:"created_at"`
-				ID        string `json:"id"`
-			}
-			if e != nil || len(raw) > 200 || json.Unmarshal(raw, &c) != nil || !receiptID.MatchString(c.ID) {
-				return bad("That page link is not valid.")
-			}
-			if _, te := time.Parse(time.RFC3339Nano, c.CreatedAt); te != nil {
-				return bad("That page link is not valid.")
-			}
-			args["p_cursor"] = c
-		default:
-			return bad("Unknown filter.")
+		args["p_status"] = in.Status
+	}
+	var from, to time.Time
+	for key, v := range map[string]*string{"p_from": &in.From, "p_to": &in.To} {
+		if *v == "" {
+			continue
+		}
+		t, e := time.Parse("2006-01-02", *v)
+		if e != nil {
+			return nil, "Dates must look like 2026-10-29."
+		}
+		args[key] = *v
+		if key == "p_from" {
+			from = t
+		} else {
+			to = t
 		}
 	}
-	from, to := "", ""
-	from, _ = args["p_from"].(string)
-	to, _ = args["p_to"].(string)
-	if from != "" && to != "" {
-		f, _ := time.Parse("2006-01-02", from)
-		t, _ := time.Parse("2006-01-02", to)
-		if t.Before(f) || t.Sub(f) > 5*366*24*time.Hour {
-			return bad("Choose a date range of at most 5 years, from before to.")
-		}
+	if !from.IsZero() && !to.IsZero() && (to.Before(from) || to.Sub(from) > 5*366*24*time.Hour) {
+		return nil, "Choose a date range of at most 5 years, from before to."
 	}
-	return args, true
+	if q := strings.TrimSpace(in.Q); q != "" {
+		if n := utf8.RuneCountInString(q); n < 2 || n > 64 {
+			return nil, "Search needs 2 to 64 characters."
+		}
+		args["p_q"] = q
+	}
+	if in.Limit != 0 {
+		if in.Limit < 1 {
+			return nil, "Limit must be at least 1."
+		}
+		args["p_limit"] = min(in.Limit, 50)
+	}
+	if in.Cursor != "" {
+		raw, e := base64.RawURLEncoding.DecodeString(in.Cursor)
+		var c struct {
+			CreatedAt string `json:"created_at"`
+			ID        string `json:"id"`
+		}
+		if e != nil || len(raw) > 200 || json.Unmarshal(raw, &c) != nil || !receiptID.MatchString(c.ID) {
+			return nil, "That page link is not valid."
+		}
+		if _, e := time.Parse(time.RFC3339Nano, c.CreatedAt); e != nil {
+			return nil, "That page link is not valid."
+		}
+		args["p_cursor"] = c
+	}
+	return args, ""
 }
