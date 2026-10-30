@@ -25,15 +25,6 @@ type Receivable struct {
 	CreatedAt       string  `json:"created_at"`
 }
 
-func outstanding(rows []Receivable) (sum int64) {
-	for _, r := range rows {
-		if r.Status == "OWED" {
-			sum += r.AmountOwedMinor
-		}
-	}
-	return
-}
-
 // receivables serves GET /api/v1/receivables and POST /api/v1/receivables/{uuid}/paid for the verified owner.
 func (a *API) receivables(w http.ResponseWriter, r *http.Request, owner string) {
 	if !a.allow(owner) {
