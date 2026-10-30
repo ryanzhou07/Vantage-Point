@@ -36,6 +36,7 @@ func main() {
 	api.TTL, api.Origin = ttl, os.Getenv("WEB_ORIGIN")
 	mux.HandleFunc("/api/v1/split/session", api.Join)
 	mux.HandleFunc("/api/v1/split/claim", api.Claim)
+	mux.HandleFunc("/api/v1/split/payment-method", api.PaymentMethod)
 	receiptAPI := auth.ProtectMethods(api, "GET", "POST", "DELETE")
 	mux.Handle("/api/v1/receipts", receiptAPI)
 	mux.Handle("/api/v1/receipts/", receiptAPI)

@@ -63,6 +63,9 @@ func (f *fakeDB) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "split_join_add":
 		_, _ = w.Write([]byte(`{"id":"p1","name":"` + asString(in["p_name"]) + `"}`))
 		return
+	case "split_participant_method":
+		_, _ = w.Write([]byte(`"VENMO"`))
+		return
 	case "split_claim":
 		if in["p_item"] == itemHeld {
 			fail("SPLIT_CLAIM_CONFLICT")

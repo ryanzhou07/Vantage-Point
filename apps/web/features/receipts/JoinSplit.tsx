@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Feedback } from '../../components/ui/Feedback';
-import { JoinError, claimRequest, formatMoney, formatRemaining, joinRequest, useSessionLive, type JoinView } from './splitSession';
+import { JoinError, claimRequest, paymentMethodRequest, formatMoney, formatRemaining, joinRequest, useSessionLive, type JoinView } from './splitSession';
 import styles from './split.module.css';
 
 type Phase = 'loading' | 'ready' | 'expired' | 'unavailable';
@@ -59,6 +59,17 @@ export function JoinSplit() {
     await load();
   }
 
+  async function chooseMethod(method: 'VENMO' | 'ZELLE') {
+    if (!view?.participant) return;
+    setProblem('');
+    try { await paymentMethodRequest(token.current, view.participant.id, method); }
+    catch (e) {
+      if (e instanceof JoinError && e.message === 'expired') { setPhase('expired'); return; }
+      setProblem('Could not save how you will pay. Try again.');
+    }
+    await load();
+  }
+
   const live = phase === 'ready';
   const remaining = useSessionLive(view?.session ?? null, view?.server_time ?? null, live, () => void load());
 
@@ -90,6 +101,14 @@ export function JoinSplit() {
                   </Button>
                 );
               })}
+            </fieldset>
+            <fieldset className={styles.names}>
+              <legend>How will you pay the owner? (optional)</legend>
+              {(['VENMO', 'ZELLE'] as const).map((m) => (
+                <Button key={m} variant={view.participant!.payment_method === m ? 'primary' : 'secondary'} aria-pressed={view.participant!.payment_method === m} onClick={() => void chooseMethod(m)}>
+                  {m === 'VENMO' ? 'Venmo' : 'Zelle'}
+                </Button>
+              ))}
             </fieldset>
             <p>Your items: {formatMoney((view.items ?? []).filter((i) => i.claimed_by === view.participant!.id).reduce((n, i) => n + i.amount_minor, 0))} before tax and tip.</p>
           </>
