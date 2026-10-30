@@ -1,4 +1,4 @@
-// Package banking owns Teller integration, secrets handling and bank connections.
+// Package banking owns provider integration, secrets handling and bank connections.
 package banking
 
 import (
@@ -18,10 +18,9 @@ import (
 
 // Secret names understood by every SecretSource.
 const (
-	SecretTellerCert  = "teller-cert"
-	SecretTellerKey   = "teller-key"
-	SecretTellerAppID = "teller-app-id"
-	SecretTokenKey    = "token-encryption-key"
+	SecretPlaidClientID = "plaid-client-id"
+	SecretPlaidSecret   = "plaid-secret"
+	SecretTokenKey      = "token-encryption-key"
 )
 
 var ErrSecretUnavailable = errors.New("banking: secret unavailable")
@@ -31,7 +30,7 @@ type SecretSource interface {
 	Get(ctx context.Context, name string) ([]byte, error)
 }
 
-// LocalSource reads files under Dir (default ~/.config/vantage-point/teller); the token key comes from TOKEN_ENCRYPTION_KEY.
+// LocalSource reads files under Dir (default ~/.config/vantage-point/banking); the token key comes from TOKEN_ENCRYPTION_KEY.
 type LocalSource struct {
 	Dir    string
 	Getenv func(string) string
@@ -42,7 +41,7 @@ func DefaultLocalDir() (string, error) {
 	if err != nil {
 		return "", ErrSecretUnavailable
 	}
-	return filepath.Join(h, ".config", "vantage-point", "teller"), nil
+	return filepath.Join(h, ".config", "vantage-point", "banking"), nil
 }
 
 func (s LocalSource) Get(_ context.Context, name string) ([]byte, error) {
@@ -86,7 +85,7 @@ type cached struct {
 	exp time.Time
 }
 
-// AWSSource reads `<Prefix><name>` (e.g. vantage-point/prod/teller-cert) with a short in-memory cache.
+// AWSSource reads `<Prefix><name>` (e.g. vantage-point/prod/plaid-secret) with a short in-memory cache.
 type AWSSource struct {
 	Client SecretsManagerAPI
 	Prefix string
@@ -136,11 +135,11 @@ func (s *AWSSource) Get(ctx context.Context, name string) ([]byte, error) {
 	return v, nil
 }
 
-// NewSecretSource selects the source from TELLER_SECRET_SOURCE (local|aws); anything else fails closed.
+// NewSecretSource selects the source from BANKING_SECRET_SOURCE (local|aws); anything else fails closed.
 func NewSecretSource(ctx context.Context, getenv func(string) string) (SecretSource, error) {
-	switch getenv("TELLER_SECRET_SOURCE") {
+	switch getenv("BANKING_SECRET_SOURCE") {
 	case "local":
-		dir := getenv("TELLER_SECRET_DIR")
+		dir := getenv("BANKING_SECRET_DIR")
 		if dir == "" {
 			var err error
 			if dir, err = DefaultLocalDir(); err != nil {
@@ -149,13 +148,13 @@ func NewSecretSource(ctx context.Context, getenv func(string) string) (SecretSou
 		}
 		return LocalSource{Dir: dir, Getenv: getenv}, nil
 	case "aws":
-		env := getenv("TELLER_SECRET_ENV")
+		env := getenv("BANKING_SECRET_ENV")
 		if env == "" || strings.ContainsAny(env, "/ ") {
-			return nil, fmt.Errorf("%w: TELLER_SECRET_ENV required", ErrSecretUnavailable)
+			return nil, fmt.Errorf("%w: BANKING_SECRET_ENV required", ErrSecretUnavailable)
 		}
 		return NewAWSSource(ctx, env)
 	}
-	return nil, fmt.Errorf("%w: TELLER_SECRET_SOURCE must be local or aws", ErrSecretUnavailable)
+	return nil, fmt.Errorf("%w: BANKING_SECRET_SOURCE must be local or aws", ErrSecretUnavailable)
 }
 
 // LoadKeyring builds the token keyring (version 1) from the source. The key is base64 of exactly 32 bytes.

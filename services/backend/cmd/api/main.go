@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"github.com/ryanzhou07/Vantage-Point/services/backend/internal/banking"
 	"github.com/ryanzhou07/Vantage-Point/services/backend/internal/foundation"
 	"github.com/ryanzhou07/Vantage-Point/services/backend/internal/receipts"
 	"log"
@@ -38,6 +40,35 @@ func main() {
 	receiptAPI := auth.ProtectMethods(api, "GET", "POST")
 	mux.Handle("/api/v1/receipts", receiptAPI)
 	mux.Handle("/api/v1/receipts/", receiptAPI)
+	// Missing Banking configuration disables only Banking connections, never auth.
+	if bankingAPI := newBankingAPI(); bankingAPI != nil {
+		bankingAPI.Mount(mux, auth)
+	}
 	server := &http.Server{Addr: ":" + port, Handler: mux, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16384}
 	log.Fatal(server.ListenAndServe())
+}
+
+func newBankingAPI() *banking.API {
+	ctx := context.Background()
+	src, err := banking.NewSecretSource(ctx, os.Getenv)
+	if err != nil {
+		log.Print("Banking disabled: secret source not configured")
+		return nil
+	}
+	keys, err := banking.LoadKeyring(ctx, src)
+	if err != nil {
+		log.Print("Banking disabled: token encryption key unavailable")
+		return nil
+	}
+	cfg, err := banking.LoadPlaidConfig(ctx, os.Getenv, src)
+	if err != nil {
+		log.Print("Banking disabled: Plaid configuration invalid or missing")
+		return nil
+	}
+	store, err := banking.NewSupabaseStore(os.Getenv("SUPABASE_URL"), os.Getenv("SUPABASE_SERVICE_ROLE_KEY"))
+	if err != nil {
+		log.Print("Banking disabled: store not configured")
+		return nil
+	}
+	return banking.NewAPI(store, banking.NewPlaid(cfg), keys)
 }
