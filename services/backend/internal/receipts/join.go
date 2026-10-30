@@ -22,7 +22,7 @@ func (a *API) Join(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := a.Now()
-	s, e := a.Store.CheckSession(r.Context(), in.Token, now)
+	s, e := a.Store.CheckSessionFor(r.Context(), in.Token, now, in.ParticipantID)
 	if e != nil {
 		storeError(w, e)
 		return
@@ -73,6 +73,9 @@ func (a *API) Join(w http.ResponseWriter, r *http.Request) {
 		for _, i := range rec.Draft.Items {
 			items = append(items, line{i.ID, SanitizeText(i.Name), i.Amount, i.ParticipantID})
 		}
+	}
+	if me, ok := out["participant"].(person); ok {
+		out["participant"] = map[string]any{"id": me.ID, "name": me.Name, "payment_method": s.PaymentMethod}
 	}
 	if in.ParticipantID != "" && out["participant"] == nil {
 		apiError(w, 404, "PARTICIPANT_NOT_FOUND", "That name is not on this receipt.")
@@ -153,4 +156,33 @@ func (a *API) publicRequest(w http.ResponseWriter, r *http.Request, prefix strin
 		return false
 	}
 	return true
+}
+
+// PaymentMethod lets a joined participant say how they will pay the owner (VENMO or ZELLE).
+// Same trust as Claim: the share token plus a participant ID of that receipt.
+func (a *API) PaymentMethod(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Token         string `json:"token"`
+		ParticipantID string `json:"participant_id"`
+		Method        string `json:"method"`
+	}
+	if !a.publicRequest(w, r, "method:", 120, &in) {
+		return
+	}
+	if !receiptID.MatchString(in.ParticipantID) || (in.Method != "VENMO" && in.Method != "ZELLE") {
+		apiError(w, 400, "INVALID_REQUEST", "Choose Venmo or Zelle.")
+		return
+	}
+	now := a.Now()
+	s, e := a.Store.CheckSession(r.Context(), in.Token, now)
+	if e == nil {
+		var ignored map[string]any
+		e = a.Store.rpc(r.Context(), "split_set_payment_method", map[string]any{"p_hash": hashToken(in.Token), "p_now": stamp(now), "p_participant": in.ParticipantID, "p_method": in.Method}, &ignored)
+	}
+	if e != nil {
+		storeError(w, e)
+		return
+	}
+	a.Store.broadcast(r.Context(), s.ID)
+	jsonReply(w, 200, map[string]string{"state": "ok"})
 }

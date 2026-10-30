@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -50,14 +51,18 @@ func (f *listDB) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(out)
 		return
 	}
-	if strings.HasSuffix(r.URL.Path, "/receivables_list") {
-		var who map[string]string
+	if strings.HasSuffix(r.URL.Path, "/receivables_search") {
+		var who map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&who)
-		if who["p_owner"] != ownerWithDebts {
-			_, _ = w.Write([]byte(`[]`))
+		if who["p_status"] != "OWED" || who["p_limit"] != float64(1) {
+			http.Error(w, `{"message":"summary must ask only for the unpaid total"}`, 400)
 			return
 		}
-		_, _ = w.Write([]byte(`[{"id":"c1","status":"OWED","amount_owed_minor":500},{"id":"c2","status":"PAID","amount_owed_minor":300}]`))
+		total := 0
+		if who["p_owner"] == ownerWithDebts {
+			total = 500 // the paid 300 is excluded by the database
+		}
+		_, _ = w.Write([]byte(`{"receivables":[],"next":null,"outstanding_minor":` + strconv.Itoa(total) + `}`))
 		return
 	}
 	var in map[string]string

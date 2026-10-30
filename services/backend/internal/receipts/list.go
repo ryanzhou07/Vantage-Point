@@ -154,10 +154,13 @@ func (a *API) summary(w http.ResponseWriter, r *http.Request, owner string) {
 		draftTotal += rows[i].SharesTotalMinor
 	}
 	// outstanding_minor is unpaid finalized receivables only; draft previews never count.
-	owed := []Receivable{}
-	if e := a.Store.rpc(r.Context(), "receivables_list", map[string]string{"p_owner": owner}, &owed); e != nil {
+	// One row is fetched only to get the exact SQL total over all unpaid receivables.
+	var owed struct {
+		Outstanding int64 `json:"outstanding_minor"`
+	}
+	if e := a.Store.rpc(r.Context(), "receivables_search", map[string]any{"p_owner": owner, "p_status": "OWED", "p_from": nil, "p_to": nil, "p_q": nil, "p_limit": 1, "p_cursor": nil}, &owed); e != nil {
 		storeError(w, e)
 		return
 	}
-	jsonReply(w, 200, map[string]any{"receipts": rows, "next_cursor": next, "limit": limit, "outstanding_minor": outstanding(owed), "page_draft_total_minor": draftTotal})
+	jsonReply(w, 200, map[string]any{"receipts": rows, "next_cursor": next, "limit": limit, "outstanding_minor": owed.Outstanding, "page_draft_total_minor": draftTotal})
 }

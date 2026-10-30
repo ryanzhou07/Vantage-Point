@@ -23,9 +23,10 @@ begin
  begin perform public.receipt_finalize(o,r,v+1);raise exception 'double finalize';exception when raise_exception then if sqlerrm<>'RECEIPT_NOT_REVIEWABLE' then raise;end if;end;
  begin perform public.receipt_save(o,r,v+1,d,null);raise exception 'edited finalized';exception when raise_exception then if sqlerrm<>'RECEIPT_NOT_REVIEWABLE' then raise;end if;end;
  begin perform public.receipt_delete(o,r);raise exception 'deleted finalized';exception when raise_exception then if sqlerrm<>'RECEIPT_NOT_REVIEWABLE' then raise;end if;end;
- c:=(public.receivables_list(o)->0);
+ c:=(public.receivables_search(o,null,null,null,null,25,null)->'receivables'->0);
  if c->>'participant_name'<>'Bob' or c->>'status'<>'OWED' then raise exception 'list wrong';end if;
- if jsonb_array_length(public.receivables_list(x))<>0 then raise exception 'receivables leak';end if;
+ if c->>'merchant'<>'Cafe' or c->>'payment_method' is not null then raise exception 'snapshot wrong';end if;
+ if jsonb_array_length(public.receivables_search(x,null,null,null,null,25,null)->'receivables')<>0 then raise exception 'receivables leak';end if;
  begin perform public.receivable_set_paid(x,(c->>'id')::uuid,true);raise exception 'cross-owner paid';exception when raise_exception then if sqlerrm<>'RECEIPT_NOT_FOUND' then raise;end if;end;
  perform public.receivable_set_paid(o,(c->>'id')::uuid,true);
  if (select status from public.receivables where id=(c->>'id')::uuid)<>'PAID' or (select paid_at from public.receivables where id=(c->>'id')::uuid) is null then raise exception 'not paid';end if;
