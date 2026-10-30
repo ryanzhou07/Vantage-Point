@@ -54,6 +54,7 @@ export function ReceivablesPanel() {
   const [attempt, setAttempt] = useState(0);
   const mounted = useRef(true);
   const focusId = useRef('');
+  const generation = useRef(0); // bumped whenever page 1 is (re)fetched, so a late Load more reply can be dropped
   const rowRefs = useRef<Record<string, HTMLLIElement | null>>({});
 
   const rangeError = input.from && input.to && input.to < input.from ? 'The end date must be on or after the start date.' : '';
@@ -74,6 +75,7 @@ export function ReceivablesPanel() {
   }, [input, rangeError, applied]);
   useEffect(() => {
     const controller = new AbortController();
+    generation.current += 1;
     search(applied, '', { signal: controller.signal })
       .then((body) => {
         if (!mounted.current || controller.signal.aborted) return;
@@ -88,14 +90,15 @@ export function ReceivablesPanel() {
   }, [rows]);
 
   async function loadMore() {
+    const mine = generation.current;
     setMore(true); setError('');
     try {
       const body = await search(applied, cursor);
-      if (!mounted.current) return;
+      if (!mounted.current || mine !== generation.current) return; // filters or data changed while loading: this page is stale
       const seen = new Set(rows.map((r) => r.id));
       const fresh = body.receivables.filter((r) => !seen.has(r.id));
       focusId.current = fresh[0]?.id ?? '';
-      setRows([...rows, ...fresh]); setOutstanding(body.outstanding_minor); setCursor(body.next_cursor);
+      setRows((current) => [...current, ...fresh]); setOutstanding(body.outstanding_minor); setCursor(body.next_cursor);
     } catch (e) { if (mounted.current) setError(e instanceof Error ? e.message : 'Could not load more. Try again.'); }
     finally { if (mounted.current) setMore(false); }
   }

@@ -47,7 +47,7 @@ func (f *fakeDB) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if f.active {
 			st = "ACTIVE"
 		}
-		return `{"id":"s1","receipt_id":"` + rid + `","status":"` + st + `","created_at":"x","expires_at":"` + f.exp.Format(time.RFC3339Nano) + `","invalidated_at":null,"owner_id":"` + ownerA + `","token_hash":"` + f.hash + `"}`
+		return `{"id":"s1","receipt_id":"` + rid + `","status":"` + st + `","created_at":"x","expires_at":"` + f.exp.Format(time.RFC3339Nano) + `","invalidated_at":null,"owner_id":"` + ownerA + `","token_hash":"` + f.hash + `","payment_method":"VENMO"}`
 	}
 	now, _ := time.Parse(time.RFC3339Nano, asString(in["p_now"]))
 	switch name {
@@ -63,9 +63,6 @@ func (f *fakeDB) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "split_join_add":
 		_, _ = w.Write([]byte(`{"id":"p1","name":"` + asString(in["p_name"]) + `"}`))
 		return
-	case "split_participant_method":
-		_, _ = w.Write([]byte(`"VENMO"`))
-		return
 	case "split_claim":
 		if in["p_item"] == itemHeld {
 			fail("SPLIT_CLAIM_CONFLICT")
@@ -73,7 +70,7 @@ func (f *fakeDB) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		_, _ = w.Write([]byte(`{}`))
 		return
-	case "split_session_check":
+	case "split_session_check", "split_session_check_for":
 		if !f.active || in["p_hash"] != f.hash || !now.Before(f.exp) {
 			fail("SESSION_INVALID")
 			return

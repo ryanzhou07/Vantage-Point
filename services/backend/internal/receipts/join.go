@@ -22,7 +22,7 @@ func (a *API) Join(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := a.Now()
-	s, e := a.Store.CheckSession(r.Context(), in.Token, now)
+	s, e := a.Store.CheckSessionFor(r.Context(), in.Token, now, in.ParticipantID)
 	if e != nil {
 		storeError(w, e)
 		return
@@ -75,12 +75,7 @@ func (a *API) Join(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if me, ok := out["participant"].(person); ok {
-		var method *string
-		if e := a.Store.rpc(r.Context(), "split_participant_method", map[string]any{"p_hash": hashToken(in.Token), "p_now": stamp(now), "p_participant": me.ID}, &method); e != nil {
-			storeError(w, e)
-			return
-		}
-		out["participant"] = map[string]any{"id": me.ID, "name": me.Name, "payment_method": method}
+		out["participant"] = map[string]any{"id": me.ID, "name": me.Name, "payment_method": s.PaymentMethod}
 	}
 	if in.ParticipantID != "" && out["participant"] == nil {
 		apiError(w, 404, "PARTICIPANT_NOT_FOUND", "That name is not on this receipt.")

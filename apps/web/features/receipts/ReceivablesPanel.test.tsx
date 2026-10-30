@@ -50,6 +50,24 @@ describe('ReceivablesPanel filters and paging', () => {
     expect(screen.getByText(/\$9\.00/)).toBeTruthy();
   });
 
+  it('drops a late Load more reply after the filters changed', async () => {
+    let release: (value: unknown) => void = () => undefined;
+    const late = new Promise((resolve) => { release = resolve; });
+    vi.mocked(receivablesRequest).mockImplementation(async (_path, init) => {
+      const body = JSON.parse(String(init?.body));
+      if (body.cursor === 'c1') return late as never;
+      return (body.status === 'PAID' ? page([row('z', 'Zed', { status: 'PAID' })]) : page([row('a', 'Bob')], 'c1')) as never;
+    });
+    render(<ReceivablesPanel />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Load more' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Paid' }));
+    await screen.findByText('Zed');
+    release(page([row('b', 'Old filter row')]));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByText('Old filter row')).toBeNull();
+    expect(screen.getByText('Zed')).toBeTruthy();
+  });
+
   it('tells apart "nothing yet" and "no matches", and shows the payment method', async () => {
     vi.mocked(receivablesRequest).mockResolvedValue(page([]) as never);
     render(<ReceivablesPanel />);
