@@ -35,6 +35,10 @@ func TestJoinExpiryParticipantsAndNoOwnerLeak(t *testing.T) {
 	if code, out = join(a, `{"token":"`+tok+`","participant_id":"p1"}`); code != 200 || out["participant"] == nil {
 		t.Fatal(code, out)
 	}
+	// The payment method rides on the session check: no extra database call per poll.
+	if me, _ := out["participant"].(map[string]any); me["payment_method"] != "VENMO" || strings.Contains(strings.Join(db.bodies, ""), "participant_method") {
+		t.Fatal("payment method missing or fetched with an extra call", out["participant"])
+	}
 	if code, _ = join(a, `{"token":"`+tok+`","participant_id":"p2"}`); code != 404 {
 		t.Fatal("excluded participant selectable", code)
 	}

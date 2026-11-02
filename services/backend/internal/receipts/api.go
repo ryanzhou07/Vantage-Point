@@ -105,6 +105,9 @@ func storeError(w http.ResponseWriter, e error) {
 	case "SPLIT_PARTICIPANT_NOT_FOUND", "SPLIT_ITEM_NOT_FOUND":
 		status = 404
 		msg = "That person or item is not on this receipt."
+	case "SPLIT_INVALID_METHOD":
+		status = 422
+		msg = "Choose Venmo or Zelle."
 	case "SPLIT_CLAIM_CONFLICT":
 		status = 409
 		msg = "Someone else already claimed that item."
