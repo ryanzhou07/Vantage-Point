@@ -51,13 +51,17 @@ func (a *API) receivables(w http.ResponseWriter, r *http.Request, owner string) 
 		jsonReply(w, 200, map[string]any{"receivables": rows, "outstanding_minor": outstanding(rows)})
 	case len(parts) == 2 && parts[1] == "paid" && receiptID.MatchString(parts[0]) && r.Method == "POST":
 		var in struct {
-			Paid bool `json:"paid"`
+			Paid *bool `json:"paid"`
 		}
-		if !readJSON(w, r, &in) {
+		if !readJSON(w, r, &in, false) {
+			return
+		}
+		if in.Paid == nil {
+			apiError(w, 400, "INVALID_REQUEST", "Send paid as true or false.")
 			return
 		}
 		var out map[string]any
-		if e := a.Store.rpc(r.Context(), "receivable_set_paid", map[string]any{"p_owner": owner, "p_id": parts[0], "p_paid": in.Paid}, &out); e != nil {
+		if e := a.Store.rpc(r.Context(), "receivable_set_paid", map[string]any{"p_owner": owner, "p_id": parts[0], "p_paid": *in.Paid}, &out); e != nil {
 			storeError(w, e)
 			return
 		}

@@ -49,17 +49,18 @@ DO $$ declare j jsonb;k jsonb;rid uuid;begin
  perform public.receipt_finish(rid,(k->>'lease_token')::uuid,null,'VISION_UNAVAILABLE',true);
  if (select status from public.receipts where id=rid)<>'PROCESSING_FAILED' then raise exception 'automatic retries unbounded';end if;
 end $$;
--- Database-wide paid-work backpressure and owner upload quota.
-DO $$ declare j jsonb;k jsonb;r jsonb;n integer;begin
- for n in 1..3 loop
-  r:=public.receipt_create('00000000-0000-4000-8000-000000000081',repeat((n+2)::text,64),'image/png');
-  perform public.receipt_enqueue('00000000-0000-4000-8000-000000000081',(r->>'id')::uuid);
+-- Database-wide paid-work backpressure (jobs spread over owners) and the per-owner in-progress quota (VP-027: 2).
+insert into auth.users(id,email,raw_user_meta_data) values
+ ('00000000-0000-4000-8000-000000000083','receipt-three@example.invalid','{}'),
+ ('00000000-0000-4000-8000-000000000084','receipt-four@example.invalid','{}');
+DO $$ declare j jsonb;k jsonb;r jsonb;o uuid;begin
+ foreach o in array array['00000000-0000-4000-8000-000000000081','00000000-0000-4000-8000-000000000083','00000000-0000-4000-8000-000000000084']::uuid[] loop
+  r:=public.receipt_create(o,repeat(substr(o::text,35,1),64),'image/png');
+  perform public.receipt_enqueue(o,(r->>'id')::uuid);
  end loop;
  j:=public.receipt_claim();k:=public.receipt_claim();
  if j is null or k is null or public.receipt_claim() is not null then raise exception 'global worker concurrency bound';end if;
- perform public.receipt_create('00000000-0000-4000-8000-000000000081',repeat('8',64),'image/png');
- perform public.receipt_create('00000000-0000-4000-8000-000000000081',repeat('9',64),'image/png');
- begin perform public.receipt_create('00000000-0000-4000-8000-000000000081',repeat('f',64),'image/png');raise exception 'active quota bypass';exception when raise_exception then if sqlerrm<>'RECEIPT_QUOTA' then raise;end if;end;
+ begin perform public.receipt_create('00000000-0000-4000-8000-000000000081',repeat('f',64),'image/png');perform public.receipt_create('00000000-0000-4000-8000-000000000081',repeat('9',64),'image/png');raise exception 'active quota bypass';exception when raise_exception then if sqlerrm<>'RECEIPT_QUOTA' then raise;end if;end;
 end $$;
 set local role anon;
 DO $$ begin

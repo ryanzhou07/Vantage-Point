@@ -61,17 +61,17 @@ func (a *API) Join(w http.ResponseWriter, r *http.Request) {
 	people, items := []person{}, []line{}
 	merchant, currency := "", ""
 	if rec.Draft != nil {
-		merchant, currency = rec.Draft.Merchant, rec.Draft.Currency
+		merchant, currency = SanitizeText(rec.Draft.Merchant), rec.Draft.Currency
 		for _, p := range rec.Draft.Participants {
 			if p.Included && p.Name != "" {
-				people = append(people, person{p.ID, p.Name})
+				people = append(people, person{p.ID, SanitizeText(p.Name)})
 				if p.ID == in.ParticipantID {
-					out["participant"] = person{p.ID, p.Name}
+					out["participant"] = person{p.ID, SanitizeText(p.Name)}
 				}
 			}
 		}
 		for _, i := range rec.Draft.Items {
-			items = append(items, line{i.ID, i.Name, i.Amount, i.ParticipantID})
+			items = append(items, line{i.ID, SanitizeText(i.Name), i.Amount, i.ParticipantID})
 		}
 	}
 	if in.ParticipantID != "" && out["participant"] == nil {

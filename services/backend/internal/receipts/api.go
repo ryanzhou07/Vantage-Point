@@ -77,7 +77,7 @@ func storeError(w http.ResponseWriter, e error) {
 	switch e.Error() {
 	case "RECEIPT_QUOTA":
 		status = 429
-		msg = "Receipt upload limit reached. Try again later."
+		msg = "Receipt scan limit reached (5 per day, 20 per 30 days, 2 in progress). Try again later."
 	case "RECEIPT_NOT_FOUND":
 		status = 404
 		msg = "Receipt was not found."
@@ -227,7 +227,7 @@ func (a *API) serve(w http.ResponseWriter, r *http.Request, owner string) {
 		var in struct {
 			Version int64 `json:"version"`
 		}
-		if !readJSON(w, r, &in) {
+		if !readJSON(w, r, &in, true) {
 			return
 		}
 		var result Record
@@ -240,7 +240,7 @@ func (a *API) serve(w http.ResponseWriter, r *http.Request, owner string) {
 		var in struct {
 			Version int64 `json:"version"`
 		}
-		if !readJSON(w, r, &in) {
+		if !readJSON(w, r, &in, true) {
 			return
 		}
 		var result Record
@@ -306,7 +306,7 @@ func (a *API) upload(w http.ResponseWriter, r *http.Request, owner string) {
 	}
 	jsonReply(w, 202, record)
 }
-func readJSON(w http.ResponseWriter, r *http.Request, out any) bool {
+func readJSON(w http.ResponseWriter, r *http.Request, out any, needVersion bool) bool {
 	if r.Header.Get("Content-Type") != "application/json" {
 		apiError(w, 415, "INVALID_REQUEST", "Use application/json.")
 		return false
@@ -317,7 +317,7 @@ func readJSON(w http.ResponseWriter, r *http.Request, out any) bool {
 		apiError(w, 400, "INVALID_REQUEST", "Send one complete JSON object; null amounts are not accepted.")
 		return false
 	}
-	if _, ok := object["version"]; !ok {
+	if _, ok := object["version"]; needVersion && !ok {
 		apiError(w, 400, "INVALID_REQUEST", "Receipt version is required.")
 		return false
 	}
@@ -387,7 +387,7 @@ func (a *API) save(w http.ResponseWriter, r *http.Request, owner, id string) {
 		Draft     Draft `json:"draft"`
 		Calculate bool  `json:"calculate"`
 	}
-	if !readJSON(w, r, &in) {
+	if !readJSON(w, r, &in, true) {
 		return
 	}
 	if e := ValidateProposal(in.Draft.Proposal); e != nil {

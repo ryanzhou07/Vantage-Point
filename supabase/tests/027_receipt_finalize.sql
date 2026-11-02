@@ -29,6 +29,8 @@ begin
  begin perform public.receivable_set_paid(x,(c->>'id')::uuid,true);raise exception 'cross-owner paid';exception when raise_exception then if sqlerrm<>'RECEIPT_NOT_FOUND' then raise;end if;end;
  perform public.receivable_set_paid(o,(c->>'id')::uuid,true);
  if (select status from public.receivables where id=(c->>'id')::uuid)<>'PAID' or (select paid_at from public.receivables where id=(c->>'id')::uuid) is null then raise exception 'not paid';end if;
+ perform public.receivable_set_paid(o,(c->>'id')::uuid,true);
+ if (select count(*) from public.receipt_events where receipt_id=r and event_type='RECEIVABLE_PAID')<>1 then raise exception 'paid not idempotent';end if;
  perform public.receivable_set_paid(o,(c->>'id')::uuid,false);
  if (select status from public.receivables where id=(c->>'id')::uuid)<>'OWED' then raise exception 'not unpaid';end if;
 end $$;
