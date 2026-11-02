@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { NavigationIcon, type NavigationIconName } from '../ui/NavigationIcon';
 import { useDashboardProfile } from '../dashboard/profile-context';
 import { FutureAction, PreviewField, SettingsCard } from './settings-parts';
+import { ConnectionsPanel } from '../../features/banking/ConnectionsPanel';
 import './settings.css';
 
 const sections = [
@@ -94,9 +95,8 @@ function AccountSettings() {
 function ConnectionsSettings() {
   return (
     <>
-      <SettingsCard title="Banking connections" description="Manage access to financial institutions once Banking is available.">
-        <div className="settings-empty"><span className="settings-tag">Not available yet</span><h4>No bank connections to display</h4><p className="settings-description">Teller and Plaid connection controls will appear here when the Banking backend is implemented. No bank data is loaded in this preview.</p></div>
-        <FutureAction description="Connecting and removing banks requires the future Banking integration.">Connect a bank</FutureAction>
+      <SettingsCard title="Banking connections" description="Connect and disconnect your financial institutions.">
+        <ConnectionsPanel />
       </SettingsCard>
       <SettingsCard title="Payment contact details" description="A future place to save payment details for reimbursements. These are contact details, not live account integrations.">
         <div className="settings-fields">

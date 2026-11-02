@@ -64,3 +64,6 @@
   .settings-section-nav button { flex-basis: calc(50% - 4px); font-size: 12px; }
   .settings-empty { padding: 16px; }
 }
+.settings-connections { display: grid; gap: 14px; justify-items: start; }
+.settings-connection-list { width: 100%; display: grid; gap: 10px; list-style: none; padding: 0; }
+.settings-connection-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; border: 1px solid #e5eaf0; border-radius: 12px; }

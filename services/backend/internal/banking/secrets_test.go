@@ -95,21 +95,21 @@ func TestKeyringFailsClosed(t *testing.T) {
 }
 
 func TestLocalPermissions(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "teller")
+	dir := filepath.Join(t.TempDir(), "banking")
 	os.Mkdir(dir, 0o700)
-	f := filepath.Join(dir, "teller-cert")
+	f := filepath.Join(dir, "plaid-secret")
 	os.WriteFile(f, []byte("PEM"), 0o600)
 	s := LocalSource{Dir: dir}
-	if b, err := s.Get(context.Background(), SecretTellerCert); err != nil || string(b) != "PEM" {
+	if b, err := s.Get(context.Background(), SecretPlaidSecret); err != nil || string(b) != "PEM" {
 		t.Fatal(err)
 	}
 	os.Chmod(f, 0o644)
-	if _, err := s.Get(context.Background(), SecretTellerCert); err == nil {
+	if _, err := s.Get(context.Background(), SecretPlaidSecret); err == nil {
 		t.Fatal("loose file accepted")
 	}
 	os.Chmod(f, 0o600)
 	os.Chmod(dir, 0o755)
-	if _, err := s.Get(context.Background(), SecretTellerCert); err == nil {
+	if _, err := s.Get(context.Background(), SecretPlaidSecret); err == nil {
 		t.Fatal("loose dir accepted")
 	}
 	os.Chmod(dir, 0o700)
@@ -136,21 +136,21 @@ func TestAWSSourceCacheAndRedaction(t *testing.T) {
 	now := time.Unix(0, 0)
 	f := &fakeSM{}
 	s := &AWSSource{Client: f, Prefix: "vantage-point/dev/", TTL: time.Minute, Now: func() time.Time { return now }}
-	b, err := s.Get(context.Background(), SecretTellerCert)
-	if err != nil || string(b) != "val:vantage-point/dev/teller-cert" {
+	b, err := s.Get(context.Background(), SecretPlaidSecret)
+	if err != nil || string(b) != "val:vantage-point/dev/plaid-secret" {
 		t.Fatal(string(b), err)
 	}
-	s.Get(context.Background(), SecretTellerCert)
+	s.Get(context.Background(), SecretPlaidSecret)
 	if f.calls != 1 {
 		t.Fatal("not cached")
 	}
 	now = now.Add(2 * time.Minute)
-	s.Get(context.Background(), SecretTellerCert)
+	s.Get(context.Background(), SecretPlaidSecret)
 	if f.calls != 2 {
 		t.Fatal("not expired")
 	}
 	f.err = errors.New("AKIASECRETLEAK")
-	_, err = (&AWSSource{Client: f}).Get(context.Background(), SecretTellerKey)
+	_, err = (&AWSSource{Client: f}).Get(context.Background(), SecretPlaidClientID)
 	if err == nil || strings.Contains(err.Error(), "AKIA") {
 		t.Fatal("error leaks or missing", err)
 	}
@@ -161,7 +161,7 @@ func TestNewSecretSourceFailsClosed(t *testing.T) {
 		t.Fatal("unset source accepted")
 	}
 	if _, err := NewSecretSource(context.Background(), func(k string) string {
-		return map[string]string{"TELLER_SECRET_SOURCE": "aws"}[k]
+		return map[string]string{"BANKING_SECRET_SOURCE": "aws"}[k]
 	}); err == nil {
 		t.Fatal("aws without env accepted")
 	}
