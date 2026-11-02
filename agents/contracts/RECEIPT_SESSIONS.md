@@ -27,3 +27,8 @@ Schema: `public.split_sessions` (Receipt-owned), one ACTIVE row per receipt (par
 - `POST /api/v1/split/claim` `{token, participant_id, item_id, release?}` -> 200 `{state:"ok"}`. One person per whole item: a free item is claimed, re-claiming your own is a no-op, an item held by someone else returns 409 `SPLIT_CLAIM_CONFLICT`; `release:true` frees only your own claim. Errors: 401 `SESSION_INVALID`, 404 `SPLIT_PARTICIPANT_NOT_FOUND|SPLIT_ITEM_NOT_FOUND`, 409 `SPLIT_NOT_READY|SPLIT_FULL`.
 - A claim is the existing `allocations` row (unique per item), so the database picks the winner. Join and claim take the receipt row lock, bump `receipts.version` (a stale owner save returns `RECEIPT_CONFLICT` instead of overwriting claims) and clear the saved preview, so the owner recalculates.
 - Limits: 30 joins/min/IP, 40 name-joins/min/session, 120 claims/min/IP. First version trusts the participant id like the name list does: anyone holding the session token could act as a listed participant.
+
+## Participant-visible data (VP-028)
+- Participant, join and share-link responses never contain `image_path`, image bytes or signed URLs. Original receipt images are readable only by their owner.
+- Merchant, item names and person names on participant paths pass through `SanitizeText` (card numbers, masked card fragments, authorization codes removed).
+- A future participant-facing receipt photo must be a redacted derivative, never the original.

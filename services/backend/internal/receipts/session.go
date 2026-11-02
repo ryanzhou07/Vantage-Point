@@ -40,7 +40,8 @@ type Session struct {
 	ExpiresAt     string  `json:"expires_at"`
 	InvalidatedAt *string `json:"invalidated_at"`
 	TokenHash     string  `json:"token_hash,omitempty"`
-	OwnerID       string  `json:"owner_id,omitempty"` // server-side only; cleared before any response
+	PaymentMethod *string `json:"payment_method,omitempty"` // only set by CheckSessionFor
+	OwnerID       string  `json:"owner_id,omitempty"`       // server-side only; cleared before any response
 }
 
 func newToken() (token, hash string, e error) {
@@ -66,8 +67,25 @@ func (s *Store) sessionOp(ctx context.Context, name string, args map[string]any)
 // CheckSession is the participant-token gate (used by the join route). The backend
 // clock decides expiry; the stored hash is re-compared in constant time.
 func (s *Store) CheckSession(ctx context.Context, token string, now time.Time) (Session, error) {
+	return s.checkSession(ctx, token, now, "split_session_check", nil)
+}
+
+// CheckSessionFor is CheckSession plus that participant's payment method, in the same single call.
+func (s *Store) CheckSessionFor(ctx context.Context, token string, now time.Time, participant string) (Session, error) {
+	extra := map[string]any{"p_participant": nil}
+	if receiptID.MatchString(participant) {
+		extra["p_participant"] = participant
+	}
+	return s.checkSession(ctx, token, now, "split_session_check_for", extra)
+}
+
+func (s *Store) checkSession(ctx context.Context, token string, now time.Time, rpc string, extra map[string]any) (Session, error) {
 	h := hashToken(token)
-	out, e := s.sessionOp(ctx, "split_session_check", map[string]any{"p_hash": h, "p_now": stamp(now)})
+	args := map[string]any{"p_hash": h, "p_now": stamp(now)}
+	for k, v := range extra {
+		args[k] = v
+	}
+	out, e := s.sessionOp(ctx, rpc, args)
 	if e != nil {
 		return Session{}, e
 	}

@@ -45,7 +45,7 @@ describe('finalize and receivables', () => {
 
   it('shows what is owed, and marks a receivable paid', async () => {
     const row = { id: 'c1', receipt_id: 'r1', merchant: 'Cafe', receipt_date: '2026-10-29', participant_name: 'Bob', amount_owed_minor: 500, status: 'OWED' as const, paid_at: null };
-    vi.mocked(receivablesRequest).mockImplementation(async (path, init) => init?.method === 'POST' ? {} as never : { receivables: [row], outstanding_minor: 500 } as never);
+    vi.mocked(receivablesRequest).mockImplementation(async (path) => path === '/search' ? { receivables: [row], outstanding_minor: 500, next_cursor: '' } as never : {} as never);
     render(<ReceivablesPanel />);
     await screen.findByText('Bob');
     expect(screen.getByText(/Still owed:/).textContent).toContain('$5.00');

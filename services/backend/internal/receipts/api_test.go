@@ -63,7 +63,7 @@ func TestJSONBoundsAndUnknownFields(t *testing.T) {
 		var in struct {
 			Version int64 `json:"version"`
 		}
-		if readJSON(w, r, &in) {
+		if readJSON(w, r, &in, true) {
 			t.Fatal("invalid JSON accepted")
 		}
 	}
