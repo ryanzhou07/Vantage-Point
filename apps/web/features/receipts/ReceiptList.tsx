@@ -14,7 +14,7 @@ export type SummaryRow = {
 };
 type Page = { receipts: SummaryRow[]; next_cursor: string; outstanding_minor: number };
 
-const STATUS: Record<string, string> = { DRAFT: 'Draft', PROCESSING: 'Processing', NEEDS_REVIEW: 'Needs review', PROCESSING_FAILED: 'Processing failed' };
+const STATUS: Record<string, string> = { DRAFT: 'Draft', PROCESSING: 'Processing', NEEDS_REVIEW: 'Needs review', PROCESSING_FAILED: 'Processing failed', FINALIZED: 'Finalized' };
 
 export function ReceiptList() {
   const [rows, setRows] = useState<SummaryRow[]>([]);
@@ -26,9 +26,15 @@ export function ReceiptList() {
   const mounted = useRef(true);
 
   useEffect(() => {
+    const refresh = () => setAttempt((n) => n + 1);
+    window.addEventListener('receipts:changed', refresh);
+    return () => window.removeEventListener('receipts:changed', refresh);
+  }, []);
+
+  useEffect(() => {
     mounted.current = true;
     const controller = new AbortController();
-    receiptRequest<Page>('/summary?limit=10', { signal: controller.signal })
+    receiptRequest<Page>('/summary/10', { signal: controller.signal })
       .then((page) => { if (!mounted.current) return; setRows(page.receipts); setNext(page.next_cursor); setOutstanding(page.outstanding_minor); setPhase('ready'); })
       .catch(() => { if (mounted.current && !controller.signal.aborted) setPhase('error'); });
     return () => { mounted.current = false; controller.abort(); };
@@ -37,7 +43,7 @@ export function ReceiptList() {
   async function loadMore() {
     setMore(true);
     try {
-      const page = await receiptRequest<Page>(`/summary?limit=10&cursor=${encodeURIComponent(next)}`);
+      const page = await receiptRequest<Page>(`/summary/10/${encodeURIComponent(next)}`);
       if (!mounted.current) return;
       setRows((current) => [...current, ...page.receipts]); setNext(page.next_cursor);
     } catch { if (mounted.current) setPhase('error'); }
@@ -46,7 +52,7 @@ export function ReceiptList() {
 
   return (
     <section className={styles.list} aria-labelledby="receipt-list-title">
-      <h2 id="receipt-list-title">Your receipts</h2>
+      <h2 id="receipt-list-title">Receipt history</h2>
       {phase === 'loading' && <Feedback>Loading your receipts...</Feedback>}
       {phase === 'error' && <>
         <Feedback tone="error">Your receipts could not be loaded.</Feedback>
@@ -55,7 +61,7 @@ export function ReceiptList() {
       {phase === 'ready' && <>
         <p className={styles.outstanding}>Outstanding from finalized receipts: <strong>{money(outstanding)}</strong></p>
         <p className={styles.note}>Draft previews are only estimates and are not counted as owed.</p>
-        {rows.length === 0 && <p>No receipts yet. Upload a receipt below to start a split.</p>}
+        {rows.length === 0 && <p>No receipts yet. Upload one on the Receipt splitting tab to start a split.</p>}
         <ul className={styles.rows}>
           {rows.map((row) => (
             <li key={row.id} className={styles.row}>

@@ -24,9 +24,47 @@ beforeEach(() => {
   vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:1');
   vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon');
   onStatus = undefined;
+  sessionStorage.clear();
   vi.mocked(receiptRequest).mockReset();
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+
+describe('open join and claims', () => {
+  const items = (by: string) => [{ id: 'i1', name: 'Soup', amount_minor: 500, claimed_by: by }, { id: 'i2', name: 'Tea', amount_minor: 250, claimed_by: 'p1' }];
+  const me = { id: 'p2', name: 'Jo' };
+
+  it('joins with a typed name, claims an item, and shows a conflict when someone else holds it', async () => {
+    window.location.hash = '#tok';
+    const fetchMock = vi.fn().mockImplementation(() => reply(200, joined({ items: items('') })));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<JoinSplit />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Jo' } });
+    fetchMock.mockImplementation(() => reply(200, joined({ participant: me, participants: [...people, me], items: items('') })));
+    fireEvent.click(screen.getByRole('button', { name: 'Join' }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(JSON.parse(fetchMock.mock.calls.at(-1)![1].body).name).toBe('Jo');
+    expect(screen.getByRole('button', { name: /Tea.*Taken by/ }).hasAttribute('disabled')).toBe(true);
+    fetchMock.mockImplementation((url: string) => url.endsWith('/claim') ? reply(409, { error: { code: 'SPLIT_CLAIM_CONFLICT', message: 'x' } }) : reply(200, joined({ participant: me, items: items('p1') })));
+    fireEvent.click(screen.getByRole('button', { name: /Soup.*Free/ }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByRole('alert').textContent).toMatch(/Someone else already claimed/);
+    expect(screen.getByRole('button', { name: /Soup.*Taken by/ })).toBeTruthy();
+  });
+
+  it('shows my total and lets me release a claim', async () => {
+    window.location.hash = '#tok';
+    const fetchMock = vi.fn().mockImplementation(() => reply(200, joined({ participant: me, participants: [...people, me], items: items('p2') })));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<JoinSplit />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByText(/Your items: \$5\.00/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Soup.*Yours/ }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    const claimCall = fetchMock.mock.calls.find((c) => String(c[0]).endsWith('/claim'));
+    expect(JSON.parse(claimCall![1].body)).toMatchObject({ item_id: 'i1', participant_id: 'p2', release: true });
+  });
+});
 
 describe('participant join', () => {
   it('joins, shows the countdown, and shows expired once the backend rejects', async () => {
@@ -82,13 +120,13 @@ describe('owner session panel', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     fireEvent.click(screen.getByRole('button', { name: 'Start split session' }));
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    expect((screen.getByLabelText('Share link') as HTMLInputElement).value).toMatch(/\/split#secret-token$/);
+    expect((screen.getByLabelText('Link') as HTMLInputElement).value).toMatch(/\/split#secret-token$/);
     expect(screen.getByRole('img', { name: /QR code/ }).querySelector('svg')).toBeTruthy();
     expect(screen.getByRole('timer').textContent).toBe('Closes in 5:00');
     await act(async () => { await vi.advanceTimersByTimeAsync(300000); });
     expect(screen.getByText(/session expired/i)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Close now' })).toBeNull();
-    expect(screen.queryByLabelText('Share link')).toBeNull();
+    expect(screen.queryByLabelText('Link')).toBeNull();
     expect(window.localStorage.length).toBe(0);
   });
 });

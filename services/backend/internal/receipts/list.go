@@ -29,7 +29,7 @@ type SummaryRow struct {
 	Status           string     `json:"status"`
 	Currency         string     `json:"currency"`
 	TotalMinor       int64      `json:"total_minor"`
-	AmountKind       string     `json:"amount_kind"` // DRAFT_PREVIEW or NONE; FINALIZED is reserved for the receivables task
+	AmountKind       string     `json:"amount_kind"` // DRAFT_PREVIEW, FINALIZED or NONE
 	Shares           []shareRow `json:"shares"`
 	SharesTotalMinor int64      `json:"shares_total_minor"`
 	CreatedAt        string     `json:"created_at"`
@@ -52,6 +52,9 @@ func summarize(r Record) SummaryRow {
 	}
 	if r.Preview != nil {
 		row.AmountKind = "DRAFT_PREVIEW"
+		if r.Status == "FINALIZED" {
+			row.AmountKind = "FINALIZED"
+		}
 		for _, s := range r.Preview.Shares {
 			row.Shares = append(row.Shares, shareRow{s.ParticipantID, names[s.ParticipantID], s.Total})
 			row.SharesTotalMinor += s.Total
@@ -150,6 +153,11 @@ func (a *API) summary(w http.ResponseWriter, r *http.Request, owner string) {
 		rows[i] = summarize(rec)
 		draftTotal += rows[i].SharesTotalMinor
 	}
-	// outstanding_minor is finalized receivables only; none exist until a finalization task lands.
-	jsonReply(w, 200, map[string]any{"receipts": rows, "next_cursor": next, "limit": limit, "outstanding_minor": 0, "page_draft_total_minor": draftTotal})
+	// outstanding_minor is unpaid finalized receivables only; draft previews never count.
+	owed := []Receivable{}
+	if e := a.Store.rpc(r.Context(), "receivables_list", map[string]string{"p_owner": owner}, &owed); e != nil {
+		storeError(w, e)
+		return
+	}
+	jsonReply(w, 200, map[string]any{"receipts": rows, "next_cursor": next, "limit": limit, "outstanding_minor": outstanding(owed), "page_draft_total_minor": draftTotal})
 }

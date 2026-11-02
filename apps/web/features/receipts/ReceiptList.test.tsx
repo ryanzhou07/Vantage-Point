@@ -31,7 +31,7 @@ describe('receipts list', () => {
     render(<ReceiptList />);
     fireEvent.click(await screen.findByRole('button', { name: 'Load more' }));
     await screen.findByText('Deli');
-    expect(vi.mocked(receiptRequest).mock.calls[1][0]).toContain('cursor=c1');
+    expect(vi.mocked(receiptRequest).mock.calls[1][0]).toBe('/summary/10/c1');
     expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull();
   });
 

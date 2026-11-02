@@ -25,6 +25,7 @@ type Participant struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Included bool   `json:"included"`
+	IsOwner  bool   `json:"is_owner"`
 }
 type Proposal struct {
 	Merchant string `json:"merchant"`

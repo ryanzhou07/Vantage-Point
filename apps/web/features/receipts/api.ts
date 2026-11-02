@@ -1,18 +1,21 @@
 import { authClient } from '../../lib/auth/client';
 
-async function authorizedFetch(path: string, init: RequestInit): Promise<Response> {
+async function authorizedFetch(path: string, init: RequestInit, root: string): Promise<Response> {
   const { data, error } = await authClient().auth.getSession();
   if (error || !data.session) throw new Error('Sign in again to access receipts.');
 
-  return fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'}/api/v1/receipts${path}`, {
+  return fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'}${root}${path}`, {
     ...init,
     headers: { ...init.headers, Authorization: `Bearer ${data.session.access_token}` },
     credentials: 'omit', cache: 'no-store', signal: init.signal ?? AbortSignal.timeout(20000),
   });
 }
 
-export async function receiptRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await authorizedFetch(path, init);
+export const receiptRequest = <T>(path: string, init: RequestInit = {}): Promise<T> => request<T>('/api/v1/receipts', path, init);
+export const receivablesRequest = <T>(path: string, init: RequestInit = {}): Promise<T> => request<T>('/api/v1/receivables', path, init);
+
+async function request<T>(root: string, path: string, init: RequestInit): Promise<T> {
+  const response = await authorizedFetch(path, init, root);
   const body = await response.json();
   if (!response.ok) {
     const messages: Record<string, string> = {
@@ -29,7 +32,7 @@ export async function receiptRequest<T>(path: string, init: RequestInit = {}): P
 export const postJSON = (value: unknown): RequestInit => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
 
 export async function receiptImage(id: string): Promise<Blob> {
-  const response = await authorizedFetch(`/${id}/image`, {});
+  const response = await authorizedFetch(`/${id}/image`, {}, '/api/v1/receipts');
   if (!response.ok) throw new Error('The private receipt image could not be loaded. Try again.');
   return response.blob();
 }
