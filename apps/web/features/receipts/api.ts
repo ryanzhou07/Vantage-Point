@@ -12,6 +12,7 @@ async function authorizedFetch(path: string, init: RequestInit, root: string): P
 }
 
 export const receiptRequest = <T>(path: string, init: RequestInit = {}): Promise<T> => request<T>('/api/v1/receipts', path, init);
+export const tripRequest = <T>(path: string, init: RequestInit = {}): Promise<T> => request<T>('/api/v1/trips', path, init);
 export const receivablesRequest = <T>(path: string, init: RequestInit = {}): Promise<T> => request<T>('/api/v1/receivables', path, init);
 
 async function request<T>(root: string, path: string, init: RequestInit): Promise<T> {

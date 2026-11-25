@@ -7,10 +7,10 @@ import { DashboardProfileContext } from '../../components/dashboard/profile-cont
 import { receiptRequest } from './api';
 import { initialDraft, type Receipt } from './types';
 
-vi.mock('./api', () => ({ receiptRequest: vi.fn(), postJSON: (body: unknown) => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) }));
+vi.mock('./api', () => ({ tripRequest: vi.fn(async () => ({ trips: [] })), receiptRequest: vi.fn(), postJSON: (body: unknown) => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) }));
 const fixture: Receipt = {
   id: 'receipt-one', status: 'NEEDS_REVIEW', version: 3, created_at: '2026-10-15', error_code: null, retries: 0, draft: null, preview: null,
-  proposal: { merchant: 'Synthetic cafe', date: '', currency: 'USD', items: [{ id: 'meal', name: 'Meal', quantity: 1, amount_minor: 1000, participant_id: '' }], subtotal_minor: 1000, tax_minor: 80, tip_minor: 200, discount_minor: 0, total_minor: 1280 },
+  proposal: { merchant: 'Synthetic cafe', date: '', currency: 'USD', items: [{ id: 'meal', name: 'Meal', quantity: 1, amount_minor: 1000, participant_ids: [] }], subtotal_minor: 1000, tax_minor: 80, tip_minor: 200, discount_minor: 0, total_minor: 1280 },
 };
 beforeEach(() => { vi.mocked(receiptRequest).mockReset(); localStorage.clear(); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -30,7 +30,7 @@ describe('owner receipt review', () => {
 
   it('loads a proposal, sends corrected draft/version and renders only the backend preview', async () => {
     const draft = { ...initialDraft(fixture)!, participants: [{ id: 'a', name: 'Student', included: true }], tax_method: 'equal', tip_method: 'proportional' };
-    draft.items = draft.items.map((item) => ({ ...item, participant_id: 'a' }));
+    draft.items = draft.items.map((item) => ({ ...item, participant_ids: ['a'] }));
     const saved = { ...fixture, version: 4, draft, preview: { draft: true as const, total_minor: 1280, shares: [{ participant_id: 'a', items_minor: 1000, tax_minor: 80, tip_minor: 200, total_minor: 1280 }] } };
     vi.mocked(receiptRequest).mockImplementation(async (path, init) => {
       if (path === '') return { receipts: [fixture] } as never;
@@ -38,7 +38,7 @@ describe('owner receipt review', () => {
       return saved as never;
     });
     render(<ReceiptWorkspace />);
-    await waitFor(() => expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id)); // opens the active receipt without a click
+    await waitFor(() => expect(document.querySelector('[data-receipt][aria-current="true"]')?.getAttribute('data-receipt')).toBe(fixture.id)); // opens the active receipt without a click
     await screen.findByRole('heading', { name: 'Saved draft split preview' });
     expect(screen.getByText(/Nobody has confirmed/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Edit receipt details' }));
@@ -70,7 +70,7 @@ describe('owner receipt review', () => {
       throw new Error('This receipt changed. Reload before saving.');
     });
     render(<ReceiptWorkspace />);
-    await waitFor(() => expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id)); // opens the active receipt without a click
+    await waitFor(() => expect(document.querySelector('[data-receipt][aria-current="true"]')?.getAttribute('data-receipt')).toBe(fixture.id)); // opens the active receipt without a click
     await screen.findByLabelText('Merchant');
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'My correction' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
@@ -82,7 +82,7 @@ describe('owner receipt review', () => {
     const failed = { ...fixture, status: 'PROCESSING_FAILED' as const, proposal: null, error_code: 'VISION_ACCESS_REQUIRED' };
     vi.mocked(receiptRequest).mockImplementation(async (path) => path === '' ? { receipts: [failed] } as never : failed as never);
     render(<ReceiptWorkspace />);
-    await waitFor(() => expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id)); // opens the active receipt without a click
+    await waitFor(() => expect(document.querySelector('[data-receipt][aria-current="true"]')?.getAttribute('data-receipt')).toBe(fixture.id)); // opens the active receipt without a click
     await screen.findByText(/Gemini 3.5 Flash-Lite access was denied/);
     expect(vi.mocked(receiptRequest).mock.calls.some(([path]) => path.endsWith('/retry'))).toBe(false);
     expect(screen.getByRole('button', { name: 'Retry extraction (2 remaining)' })).toBeTruthy();
@@ -91,17 +91,18 @@ describe('owner receipt review', () => {
     vi.mocked(receiptRequest).mockImplementation(async (path) => path === '' ? { receipts: [fixture] } as never : fixture as never);
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<ReceiptWorkspace />);
-    await waitFor(() => expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id)); // opens the active receipt without a click
+    await waitFor(() => expect(document.querySelector('[data-receipt][aria-current="true"]')?.getAttribute('data-receipt')).toBe(fixture.id)); // opens the active receipt without a click
     await screen.findByLabelText('Merchant');
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Unsaved receipt A correction' } });
     const before = vi.mocked(receiptRequest).mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: '+ New receipt' }));
     fireEvent.change(screen.getByLabelText('Receipt image'), { target: { files: [new File(['synthetic'], filename, { type: 'image/png' })] } });
     fireEvent.click(screen.getByRole('button', { name: 'Upload and extract' }));
     await waitFor(() => expect(confirm).toHaveBeenCalledOnce());
     await waitFor(() => expect((screen.getByRole('button', { name: 'Upload and extract' }) as HTMLButtonElement).disabled).toBe(false));
     expect(vi.mocked(receiptRequest).mock.calls.length).toBe(before);
     expect((screen.getByLabelText('Merchant') as HTMLInputElement).value).toBe('Unsaved receipt A correction');
-    expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id);
+    expect(document.querySelector('[data-receipt][aria-current="true"]')?.getAttribute('data-receipt')).toBe(fixture.id);
     expect(screen.getByText(/Unsaved changes/)).toBeTruthy();
   });
 
@@ -109,7 +110,7 @@ describe('owner receipt review', () => {
     const recovered = { ...fixture, error_code: 'LEGACY_REVIEW_REQUIRED' };
     vi.mocked(receiptRequest).mockImplementation(async (path) => path === '' ? { receipts: [recovered] } as never : recovered as never);
     render(<ReceiptWorkspace />);
-    await waitFor(() => expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id)); // opens the active receipt without a click
+    await waitFor(() => expect(document.querySelector('[data-receipt][aria-current="true"]')?.getAttribute('data-receipt')).toBe(fixture.id)); // opens the active receipt without a click
     await screen.findByText('Review the date, split methods and item assignments before calculating this recovered draft.');
     expect((screen.getByLabelText('Receipt date (YYYY-MM-DD)') as HTMLInputElement).value).toBe('');
     expect(screen.queryByRole('heading', { name: 'Saved draft split preview' })).toBeNull();
@@ -125,7 +126,7 @@ describe('owner receipt review', () => {
     });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<ReceiptWorkspace />);
-    await waitFor(() => expect((screen.getByLabelText('Recent drafts (latest 20)') as HTMLSelectElement).value).toBe(fixture.id));
+    await waitFor(() => expect(document.querySelector('[data-receipt][aria-current="true"]')?.getAttribute('data-receipt')).toBe(fixture.id));
     fireEvent.click(screen.getByRole('button', { name: 'Delete receipt' }));
     await screen.findByText('Receipt deleted.');
     expect(vi.mocked(receiptRequest)).toHaveBeenCalledWith(`/${fixture.id}`, { method: 'DELETE' });

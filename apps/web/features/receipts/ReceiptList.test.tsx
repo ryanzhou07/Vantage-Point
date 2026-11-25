@@ -18,7 +18,7 @@ describe('receipts list', () => {
     render(<ReceiptList />);
     await waitFor(() => expect(screen.getByText('Cafe')).toBeTruthy());
     expect(screen.getByText('Draft preview, not owed')).toBeTruthy();
-    expect(screen.getByText('Finalized')).toBeTruthy();
+    expect(screen.getAllByText('Finalized').length).toBeGreaterThan(1);
     expect(screen.getAllByText('$6.67').length).toBeGreaterThan(0);
     expect(screen.getAllByText('$10.00').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Outstanding from finalized receipts:')[0].parentElement?.textContent).toContain('$0.00');

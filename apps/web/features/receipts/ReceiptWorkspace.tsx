@@ -7,6 +7,7 @@ import { receiptRequest, receiptImage, postJSON } from './api';
 import { ReceiptEditor } from './ReceiptEditor';
 import { SplitPreview } from './SplitPreview';
 import { SplitSessionPanel } from './SplitSessionPanel';
+import { CollectionPicker } from '../trips/CollectionPicker';
 import { useDashboardProfile } from '../../components/dashboard/profile-context';
 import { initialDraft, money, withOwner, type Draft, type Receipt } from './types';
 import { missingFields } from './validate';
@@ -23,6 +24,8 @@ export function ReceiptWorkspace() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [dirty, setDirty] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
+  const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -42,7 +45,8 @@ export function ReceiptWorkspace() {
         // Resume the receipt you were last working on (else the newest) so a refresh does not need a re-click.
         let last: string | null = null;
         try { last = localStorage.getItem(ACTIVE_KEY); } catch { /* per-viewer convenience only */ }
-        const target = list.find((entry) => entry.id === last) ?? list[0];
+        const inView = list.filter((entry) => entry.status !== 'FINALIZED');
+        const target = inView.find((entry) => entry.id === last) ?? inView[0];
         if (!target) return;
         const value = await receiptRequest<Receipt>(`/${target.id}`, { signal: controller.signal });
         if (mounted.current && !controller.signal.aborted) setReceipt((current) => { if (current) return current; setDraft(withOwner(initialDraft(value), ownerName.current)); return value; });
@@ -101,6 +105,7 @@ export function ReceiptWorkspace() {
     setNotice('Uploading image. Keep this page open…');
     const value = await receiptRequest<Receipt>('', { method: 'POST', headers: { 'Content-Type': file.type }, body: file });
     accept(value);
+    setShowUpload(false);
     setImageURL(URL.createObjectURL(file));
     setNotice('Image uploaded. Processing runs in the Receipt worker.');
   }
@@ -121,6 +126,8 @@ export function ReceiptWorkspace() {
     } catch { /* next trigger retries */ }
   }
 
+  const shown = receipts.filter((v) => v.status !== 'FINALIZED' && (v.draft?.merchant || v.proposal?.merchant || 'Receipt').toLowerCase().includes(q.trim().toLowerCase()));
+  const drafts = receipts.filter((v) => v.status !== 'FINALIZED').length;
   const missing = draft ? missingFields(draft) : [];
 
   async function remove() {
@@ -145,7 +152,7 @@ export function ReceiptWorkspace() {
     if (!receipt || !window.confirm('Finalize this receipt? Everyone\'s amount becomes a receivable, the share link stops working, and the receipt can no longer be edited.')) return;
     accept(await receiptRequest<Receipt>(`/${receipt.id}/finalize`, postJSON({ version: receipt.version })));
     window.dispatchEvent(new Event('receipts:changed'));
-    setNotice('Receipt finalized. Track who has paid on the Receivables tab.');
+    setNotice('Receipt finalized. Track who has paid under Owed to me.');
   }
 
   async function open(id: string) {
@@ -153,23 +160,29 @@ export function ReceiptWorkspace() {
     accept(await receiptRequest<Receipt>(`/${id}`));
     setEditing(false);
     setImageURL('');
+    setShowUpload(false);
   }
 
   return (
     <div className={styles.workspace}>
-      <header><p className={styles.eyebrow}>RECEIPTS / OWNER DRAFT</p><h1>From receipt to shared total</h1><p>Upload, check the details, share the link so people claim their own items, and preview everyone’s share.</p></header>
-      <section className={styles.card} aria-labelledby="receipt-upload">
+      <header className={`${styles.hero} ${styles.heroRow}`}><div><h1>Drafts</h1><p>Upload a receipt, check the details, share it so people claim their items.</p></div><Button disabled={busy} onClick={() => setShowUpload(true)}>+ New receipt</Button></header>
+      {(showUpload || drafts === 0) && <section className={styles.card} aria-labelledby="receipt-upload">
         <h2 id="receipt-upload">Attach a receipt</h2>
         <p>JPEG or PNG, up to 5 MiB and 16 megapixels. Your image stays private. Processing sends it to the configured vision provider.</p>
         <label className={styles.file}>Receipt image<input ref={fileInput} type="file" accept="image/jpeg,image/png" disabled={busy} /></label>
         <Button disabled={busy} onClick={() => void action(upload)}>{busy ? 'Working…' : 'Upload and extract'}</Button>
-      </section>
+      </section>}
       {error && <Feedback tone="error">{error}</Feedback>}
       {notice && <Feedback>{notice}</Feedback>}
-      <label className={styles.file}>Recent drafts (latest 20)<select value={receipt?.id ?? ''} disabled={busy} onChange={(event) => { if (event.target.value) void action(() => open(event.target.value)); }}><option value="">Choose a receipt</option>{receipts.map((value) => <option key={value.id} value={value.id}>{value.draft?.merchant || value.proposal?.merchant || 'Receipt'} — {value.status.toLowerCase().replaceAll('_', ' ')} — {value.created_at.slice(0, 10)}</option>)}</select></label>
+      <div className={styles.master}>
+      <nav className={styles.picker} aria-label="Your receipts">
+        {drafts > 1 && <label>Search drafts<input type="search" value={q} maxLength={64} onChange={(e) => setQ(e.target.value)} /></label>}
+        {shown.length === 0 ? <p className={styles.empty}>{drafts ? 'No drafts match that search.' : 'No drafts yet. Choose + New receipt to upload one.'}</p> : <ul className={styles.pickerList}>{shown.map((v) => <li key={v.id}><button type="button" data-receipt={v.id} aria-current={v.id === receipt?.id ? 'true' : undefined} disabled={busy} onClick={() => void action(() => open(v.id))}><strong>{v.draft?.merchant || v.proposal?.merchant || 'Receipt'}</strong><span className={styles.status} data-status={v.status}>{v.status.toLowerCase().replaceAll('_', ' ')}</span><span className={styles.date}>{v.created_at.slice(0, 10)}</span></button></li>)}</ul>}
+      </nav>
 
-      {receipt && <section className={styles.card} aria-labelledby="current-receipt">
-        <div className={styles.actions}><h2 id="current-receipt">Current receipt</h2><Button variant="secondary" disabled={busy} onClick={() => void action(() => open(receipt.id))}>Reload receipt</Button><Button variant="secondary" disabled={busy || receipt.status === 'PROCESSING' || receipt.status === 'FINALIZED'} onClick={() => void action(remove)}>Delete receipt</Button></div>
+      {receipt ? <section className={styles.card} aria-labelledby="current-receipt">
+        <div className={styles.actions}><h2 id="current-receipt">Current receipt</h2>{receipt.status === 'PROCESSING' && <Button variant="secondary" disabled={busy} onClick={() => void action(() => open(receipt.id))}>Reload receipt</Button>}<Button variant="secondary" disabled={busy || receipt.status === 'PROCESSING' || receipt.status === 'FINALIZED'} onClick={() => void action(remove)}>Delete receipt</Button></div>
+        {receipt.status !== 'PROCESSING' && <CollectionPicker key={receipt.id} receiptId={receipt.id} value={receipt.collection_id} disabled={busy} />}
         {receipt.status === 'PROCESSING' && <Feedback>Processing image… You can return later; the job is saved.</Feedback>}
         {receipt.error_code === 'LEGACY_REVIEW_REQUIRED' && !receipt.preview && <Feedback>Review the date, split methods and item assignments before calculating this recovered draft.</Feedback>}
         {receipt.status === 'DRAFT' && <Feedback>The upload did not finish. Upload the same image again to resume safely.</Feedback>}
@@ -187,26 +200,27 @@ export function ReceiptWorkspace() {
           <div className={styles.actions}><Button disabled={busy || missing.length > 0} onClick={() => void action(confirm)}>Confirm receipt and continue</Button><Button variant="secondary" disabled={busy} onClick={() => void action(() => save(false))}>Save draft</Button></div>
         </>}
         {draft && receipt.draft && receipt.status === 'FINALIZED' && <>
-          <Feedback>Finalized. This split is locked. Amounts owed to you are on the Receivables tab.</Feedback>
+          <Feedback>Finalized. This split is locked. Find it under Browse, and track payments under Owed to me.</Feedback>
           {receipt.preview && <SplitPreview preview={receipt.preview} draft={draft} />}
         </>}
         {draft && receipt.draft && !editing && receipt.status === 'NEEDS_REVIEW' && <>
           <section className={styles.card} aria-labelledby="confirmed-receipt">
             <h2 id="confirmed-receipt">Step 2 of 2 · Share and claim</h2>
             <p>{receipt.draft.merchant} · {receipt.draft.date} · total {money(receipt.draft.total_minor)}. People scan the code or open the link, enter their name and claim their own items.</p>
-            <ul>{draft.items.map((line) => <li key={line.id}>{line.name} · {money(line.amount_minor)} · {draft.participants.find((p) => p.id === line.participant_id)?.name ?? 'not claimed yet'}</li>)}</ul>
+            <ul>{draft.items.map((line) => <li key={line.id}>{line.name} · {money(line.amount_minor)} · {draft.participants.filter((p) => line.participant_ids.includes(p.id)).map((p) => p.name).join(', ') || 'not claimed yet'}</li>)}</ul>
             <div className={styles.actions}>
               <Button variant="secondary" disabled={busy} onClick={() => setEditing(true)}>Edit receipt details</Button>
-              <Button disabled={busy || draft.items.some((line) => !line.participant_id)} onClick={() => void action(() => save(true))}>Calculate split preview</Button>
+              <Button disabled={busy || draft.items.some((line) => !line.participant_ids.length)} onClick={() => void action(() => save(true))}>Calculate split preview</Button>
               <Button disabled={busy || dirty || !receipt.preview} onClick={() => void action(finalize)}>Finalize receipt</Button>
             </div>
             {!receipt.preview && <p>Calculate the split preview, then finalize. Any new join or claim clears the preview so you re-check the numbers.</p>}
-            {draft.items.some((line) => !line.participant_id) && <p>The split preview unlocks once every item is claimed.</p>}
+            {draft.items.some((line) => !line.participant_ids.length) && <p>The split preview unlocks once every item is claimed.</p>}
           </section>
           {!dirty && receipt.preview && <SplitPreview preview={receipt.preview} draft={draft} />}
           <SplitSessionPanel receiptId={receipt.id} onUpdate={() => void syncClaims()} />
         </>}
-      </section>}
+      </section> : drafts > 0 ? <p className={styles.empty}>Select a draft to see its details.</p> : null}
+      </div>
     </div>
   );
 }

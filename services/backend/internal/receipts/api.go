@@ -108,6 +108,21 @@ func storeError(w http.ResponseWriter, e error) {
 	case "SPLIT_INVALID_METHOD":
 		status = 422
 		msg = "Choose Venmo or Zelle."
+	case "TRIP_NOT_FOUND":
+		status = 404
+		msg = "That trip was not found."
+	case "TRIP_INVALID_NAME":
+		status = 422
+		msg = "Enter a trip name up to 80 characters."
+	case "TRIP_LIMIT", "TRIP_FULL":
+		status = 409
+		msg = "This trip limit has been reached."
+	case "TRIP_INVITE_INVALID":
+		status = 400
+		msg = "This invite link is invalid or has expired."
+	case "TRIP_FORBIDDEN":
+		status = 403
+		msg = "You cannot do that in this trip."
 	case "SPLIT_CLAIM_CONFLICT":
 		status = 409
 		msg = "Someone else already claimed that item."
@@ -125,6 +140,10 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	owner, ok := foundation.UserID(r.Context())
 	if !ok {
 		apiError(w, 401, "UNAUTHENTICATED", "Sign in to continue.")
+		return
+	}
+	if strings.HasPrefix(r.URL.Path, "/api/v1/trips") {
+		a.trips(w, r, owner)
 		return
 	}
 	if strings.HasPrefix(r.URL.Path, "/api/v1/receivables") {
@@ -224,6 +243,19 @@ func (a *API) serve(w http.ResponseWriter, r *http.Request, owner string) {
 		return
 	}
 	switch parts[1] {
+	case "collection": // file the receipt into a trip you belong to, or null to un-file it
+		var in struct {
+			CollectionID *string `json:"collection_id"`
+		}
+		if !smallJSON(w, r, &in) || (in.CollectionID != nil && !receiptID.MatchString(*in.CollectionID)) {
+			return
+		}
+		var result map[string]any
+		if e = a.Store.rpc(r.Context(), "receipt_set_collection", map[string]any{"p_owner": owner, "p_receipt": id, "p_collection": in.CollectionID}, &result); e != nil {
+			storeError(w, e)
+			return
+		}
+		jsonReply(w, 200, result)
 	case "review":
 		a.save(w, r, owner, id)
 	case "finalize":
@@ -333,7 +365,7 @@ func readJSON(w http.ResponseWriter, r *http.Request, out any, needVersion bool)
 		if lines, ok := d["items"].([]any); ok {
 			for _, line := range lines {
 				item, ok := line.(map[string]any)
-				if !ok || !hasFields(item, "id", "name", "quantity", "amount_minor", "participant_id") {
+				if !ok || !hasFields(item, "id", "name", "quantity", "amount_minor", "participant_ids") {
 					apiError(w, 400, "INVALID_REQUEST", "Send complete item line fields.")
 					return false
 				}
@@ -439,9 +471,13 @@ func (a *API) save(w http.ResponseWriter, r *http.Request, owner, id string) {
 		return
 	}
 	for _, item := range in.Draft.Items {
-		if item.ParticipantID != "" && !participantIDs[item.ParticipantID] {
-			apiError(w, 422, "INVALID_REVIEW", "Choose an existing participant for every assignment.")
-			return
+		seen := map[string]bool{}
+		for _, id := range item.ParticipantIDs {
+			if !participantIDs[id] || seen[id] {
+				apiError(w, 422, "INVALID_REVIEW", "Choose existing, distinct participants for every assignment.")
+				return
+			}
+			seen[id] = true
 		}
 	}
 	var preview *Preview

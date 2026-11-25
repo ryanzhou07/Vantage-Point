@@ -27,7 +27,7 @@ export function ReceiptEditor({ draft, disabled, onChange }: Props) {
         <div className={styles.person} key={participant.id}>
           <label>{participant.is_owner ? 'You (owner, locked)' : `Participant ${index + 1}`}<input required maxLength={100} readOnly={participant.is_owner} value={participant.name} onChange={(event) => person(participant.id, { name: event.target.value })} /></label>
           <label className={styles.check}><input type="checkbox" disabled={participant.is_owner} checked={participant.included} onChange={(event) => person(participant.id, { included: event.target.checked })} />Included</label>
-          {!participant.is_owner && <Button variant="secondary" onClick={() => update({ participants: draft.participants.filter((value) => value.id !== participant.id), items: draft.items.map((value) => value.participant_id === participant.id ? { ...value, participant_id: '' } : value) })}>Remove participant {index + 1}</Button>}
+          {!participant.is_owner && <Button variant="secondary" onClick={() => update({ participants: draft.participants.filter((value) => value.id !== participant.id), items: draft.items.map((value) => ({ ...value, participant_ids: value.participant_ids.filter((id) => id !== participant.id) })) })}>Remove participant {index + 1}</Button>}
         </div>
       ))}
       <Button variant="secondary" disabled={draft.participants.length >= 40} onClick={() => update({ participants: [...draft.participants, { id: crypto.randomUUID(), name: '', included: true }] })}>Add participant</Button>
@@ -40,11 +40,11 @@ export function ReceiptEditor({ draft, disabled, onChange }: Props) {
           <label>Name<input required maxLength={200} value={line.name} onChange={(event) => item(line.id, { name: event.target.value })} /></label>
           <label>Quantity<input type="number" min="1" max="1000" step="1" required value={line.quantity} onChange={(event) => item(line.id, { quantity: event.target.valueAsNumber })} /></label>
           <Cents label="Line amount" value={line.amount_minor} onChange={(amount_minor) => item(line.id, { amount_minor })} />
-          <p>Claimed by: {draft.participants.find((participant) => participant.id === line.participant_id)?.name || 'Nobody yet (people claim their own items from the share link)'}</p>
+          <p>Claimed by: {draft.participants.filter((participant) => line.participant_ids.includes(participant.id)).map((participant) => participant.name).join(', ') || 'Nobody yet (people claim their own items from the share link)'}</p>
           <Button variant="secondary" onClick={() => update({ items: draft.items.filter((value) => value.id !== line.id) })}>Remove item {index + 1}</Button>
         </fieldset>
       ))}
-      <Button variant="secondary" disabled={draft.items.length >= 200} onClick={() => update({ items: [...draft.items, { id: crypto.randomUUID(), name: '', quantity: 1, amount_minor: 0, participant_id: '' }] })}>Add item</Button>
+      <Button variant="secondary" disabled={draft.items.length >= 200} onClick={() => update({ items: [...draft.items, { id: crypto.randomUUID(), name: '', quantity: 1, amount_minor: 0, participant_ids: [] }] })}>Add item</Button>
 
       <h3>Reconcile amounts</h3>
       <p>Nonzero receipt-level discounts block calculation in this first version. Resolve them explicitly into verified item line amounts and subtotal; the original extraction remains available.</p>

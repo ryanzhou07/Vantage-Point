@@ -23,6 +23,8 @@ export function ReceiptList() {
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading');
   const [more, setMore] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [q, setQ] = useState('');
+  const [show, setShow] = useState<'' | 'DRAFTS' | 'FINALIZED'>('');
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -50,9 +52,14 @@ export function ReceiptList() {
     finally { if (mounted.current) setMore(false); }
   }
 
+  // shortcut: filters only the pages already loaded (no receipt search endpoint yet); add one server-side when history outgrows Load more.
+  const needle = q.trim().toLowerCase();
+  const visible = rows.filter((row) => (show === '' || (row.status === 'FINALIZED') === (show === 'FINALIZED'))
+    && (!needle || row.merchant.toLowerCase().includes(needle) || row.shares.some((s) => s.name.toLowerCase().includes(needle))));
+
   return (
     <section className={styles.list} aria-labelledby="receipt-list-title">
-      <h2 id="receipt-list-title">Receipt history</h2>
+      <h2 id="receipt-list-title">Browse receipts</h2>
       {phase === 'loading' && <Feedback>Loading your receipts...</Feedback>}
       {phase === 'error' && <>
         <Feedback tone="error">Your receipts could not be loaded.</Feedback>
@@ -61,9 +68,21 @@ export function ReceiptList() {
       {phase === 'ready' && <>
         <p className={styles.outstanding}>Outstanding from finalized receipts: <strong>{money(outstanding)}</strong></p>
         <p className={styles.note}>Draft previews are only estimates and are not counted as owed.</p>
-        {rows.length === 0 && <p>No receipts yet. Upload one on the Receipt splitting tab to start a split.</p>}
+        <form role="search" className={styles.filters} onSubmit={(e) => e.preventDefault()}>
+          <label className={styles.field}>Search merchant or name
+            <input type="search" value={q} maxLength={64} onChange={(e) => setQ(e.target.value)} />
+          </label>
+          <fieldset className={styles.statusGroup}>
+            <legend>Show</legend>
+            {([['', 'All'], ['DRAFTS', 'Drafts'], ['FINALIZED', 'Finalized']] as const).map(([value, label]) => (
+              <Button key={value || 'all'} variant={show === value ? 'primary' : 'secondary'} aria-pressed={show === value} onClick={() => setShow(value)}>{label}</Button>
+            ))}
+          </fieldset>
+        </form>
+        {rows.length === 0 && <p>No receipts yet. Upload one under Drafts to start a split.</p>}
+        {rows.length > 0 && visible.length === 0 && <p>No receipts match{next ? ' yet. Load more to search older receipts' : ''}.</p>}
         <ul className={styles.rows}>
-          {rows.map((row) => (
+          {visible.map((row) => (
             <li key={row.id} className={styles.row}>
               <div className={styles.head}>
                 <strong>{row.merchant || 'Unnamed receipt'}</strong>

@@ -21,7 +21,7 @@ func TestMarkPaidNeedsPaidNotVersion(t *testing.T) {
 			t.Errorf("paid body %s: got %d, want %d (%s)", body, w.Code, want, w.Body.String())
 		}
 	}
-	if !strings.Contains(strings.Join(db.bodies, ""), `"p_paid":true`) {
+	if !strings.Contains(strings.Join(db.all(), ""), `"p_paid":true`) {
 		t.Fatal("paid flag not forwarded to the database")
 	}
 	for _, route := range []string{"review", "finalize", "retry"} {
@@ -56,7 +56,7 @@ func TestReceivableSearchValidation(t *testing.T) {
 			t.Errorf("body %s: got %d, want %d (%s)", body, w.Code, want, w.Body.String())
 		}
 	}
-	all := strings.Join(db.bodies, "")
+	all := strings.Join(db.all(), "")
 	if !strings.Contains(all, `"p_limit":50`) || strings.Contains(all, `"p_limit":999`) || !strings.Contains(all, `"p_owner":"`+ownerA+`"`) {
 		t.Fatalf("limit not clamped or owner not forwarded: %s", all)
 	}
@@ -87,7 +87,7 @@ func TestPaymentMethodValidationAndToken(t *testing.T) {
 			t.Errorf("%s: got %d, want %d", body, w.Code, want)
 		}
 	}
-	if !strings.Contains(strings.Join(db.bodies, ""), `"p_method":"ZELLE"`) {
+	if !strings.Contains(strings.Join(db.all(), ""), `"p_method":"ZELLE"`) {
 		t.Fatal("method not forwarded")
 	}
 }

@@ -9,7 +9,7 @@ begin
  update public.receipts set status='NEEDS_REVIEW' where id=r;
  select version into v from public.receipts where id=r;
  d:=jsonb_build_object('merchant','Cafe','date','2026-10-29','currency','USD','subtotal_minor',800,'tax_minor',0,'tip_minor',0,'discount_minor',0,'total_minor',800,'tax_method','equal','tip_method','equal',
-  'items',jsonb_build_array(jsonb_build_object('id','i1','name','Soup','quantity',1,'amount_minor',500,'participant_id','bob'),jsonb_build_object('id','i2','name','Tea','quantity',1,'amount_minor',300,'participant_id','me')),
+  'items',jsonb_build_array(jsonb_build_object('id','i1','name','Soup','quantity',1,'amount_minor',500,'participant_ids',jsonb_build_array('bob')),jsonb_build_object('id','i2','name','Tea','quantity',1,'amount_minor',300,'participant_ids',jsonb_build_array('me'))),
   'participants',jsonb_build_array(jsonb_build_object('id','me','name','Ada','included',true,'is_owner',true),jsonb_build_object('id','bob','name','Bob','included',true)));
  pv:=jsonb_build_object('shares',jsonb_build_array(jsonb_build_object('participant_id','me','items_minor',300,'tax_minor',0,'tip_minor',0,'total_minor',300),jsonb_build_object('participant_id','bob','items_minor',500,'tax_minor',0,'tip_minor',0,'total_minor',500)));
  doc:=public.receipt_save(o,r,v,d,null);v:=(doc->>'version')::bigint;

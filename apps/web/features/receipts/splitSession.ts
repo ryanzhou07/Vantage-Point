@@ -6,7 +6,7 @@ export type SessionView = { state: SessionState; server_time: string; session: {
 export type JoinView = {
   state: 'ACTIVE'; server_time: string; session: { id: string; expires_at: string };
   receipt: { merchant: string; currency: string }; participants: { id: string; name: string }[]; participant?: { id: string; name: string; payment_method?: 'VENMO' | 'ZELLE' | null };
-  items?: { id: string; name: string; amount_minor: number; claimed_by: string }[];
+  items?: { id: string; name: string; amount_minor: number; claimed_by: string[] }[];
 };
 
 export class JoinError extends Error {

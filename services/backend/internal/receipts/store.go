@@ -13,19 +13,20 @@ import (
 )
 
 type Record struct {
-	ID        string    `json:"id"`
-	OwnerID   string    `json:"owner_id"`
-	ImagePath string    `json:"image_path"`
-	ImageHash string    `json:"image_hash"`
-	ImageMIME string    `json:"image_mime"`
-	Status    string    `json:"status"`
-	Version   int64     `json:"version"`
-	Proposal  *Proposal `json:"proposal"`
-	Draft     *Draft    `json:"draft"`
-	Preview   *Preview  `json:"preview"`
-	ErrorCode string    `json:"error_code"`
-	Retries   int       `json:"retries"`
-	CreatedAt string    `json:"created_at"`
+	ID           string    `json:"id"`
+	OwnerID      string    `json:"owner_id"`
+	ImagePath    string    `json:"image_path"`
+	ImageHash    string    `json:"image_hash"`
+	ImageMIME    string    `json:"image_mime"`
+	Status       string    `json:"status"`
+	Version      int64     `json:"version"`
+	Proposal     *Proposal `json:"proposal"`
+	Draft        *Draft    `json:"draft"`
+	Preview      *Preview  `json:"preview"`
+	ErrorCode    string    `json:"error_code"`
+	Retries      int       `json:"retries"`
+	CreatedAt    string    `json:"created_at"`
+	CollectionID *string   `json:"collection_id"`
 }
 type Store struct {
 	base, key string
@@ -67,7 +68,7 @@ func (s *Store) request(ctx context.Context, method, path, mime string, data []b
 		}
 		_ = json.Unmarshal(b, &failure)
 		switch failure.Message {
-		case "RECEIPT_QUOTA", "RECEIPT_NOT_FOUND", "RECEIPT_CONFLICT", "RECEIPT_NOT_REVIEWABLE", "RECEIPT_RETRY_LIMIT", "RECEIPT_INVALID_REVIEW", "RECEIPT_INVALID_ALLOCATION", "SESSION_NOT_FOUND", "SESSION_INVALID", "SPLIT_NOT_READY", "SPLIT_INVALID_NAME", "SPLIT_FULL", "SPLIT_PARTICIPANT_NOT_FOUND", "SPLIT_ITEM_NOT_FOUND", "SPLIT_CLAIM_CONFLICT", "SPLIT_INVALID_METHOD":
+		case "RECEIPT_QUOTA", "RECEIPT_NOT_FOUND", "RECEIPT_CONFLICT", "RECEIPT_NOT_REVIEWABLE", "RECEIPT_RETRY_LIMIT", "RECEIPT_INVALID_REVIEW", "RECEIPT_INVALID_ALLOCATION", "SESSION_NOT_FOUND", "SESSION_INVALID", "SPLIT_NOT_READY", "SPLIT_INVALID_NAME", "SPLIT_FULL", "SPLIT_PARTICIPANT_NOT_FOUND", "SPLIT_ITEM_NOT_FOUND", "SPLIT_CLAIM_CONFLICT", "SPLIT_INVALID_METHOD", "TRIP_NOT_FOUND", "TRIP_INVALID_NAME", "TRIP_LIMIT", "TRIP_FULL", "TRIP_INVITE_INVALID", "TRIP_FORBIDDEN":
 			return nil, errors.New(failure.Message)
 		}
 		return nil, errors.New("RECEIPT_UNAVAILABLE")

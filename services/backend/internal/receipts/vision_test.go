@@ -27,7 +27,7 @@ func TestGeminiStructuredExtractionAndSecretHeader(t *testing.T) {
 		p := validDraft().Proposal
 		for n := range p.Items {
 			p.Items[n].ID = ""
-			p.Items[n].ParticipantID = ""
+			p.Items[n].ParticipantIDs = nil
 		}
 		b, _ := json.Marshal(p)
 		_ = json.NewEncoder(w).Encode(map[string]any{"candidates": []any{map[string]any{"finishReason": "STOP", "content": map[string]any{"parts": []any{map[string]string{"text": string(b)}}}}}})
@@ -37,7 +37,7 @@ func TestGeminiStructuredExtractionAndSecretHeader(t *testing.T) {
 	g.endpoint = server.URL
 	g.Client = server.Client()
 	p, e := g.Extract(context.Background(), []byte("fake image"), "image/png")
-	if e != nil || len(p.Items) != 2 || p.Items[0].ID != "item-001" || p.Items[0].ParticipantID != "" {
+	if e != nil || len(p.Items) != 2 || p.Items[0].ID != "item-001" || len(p.Items[0].ParticipantIDs) != 0 {
 		t.Fatalf("%+v %v", p, e)
 	}
 }

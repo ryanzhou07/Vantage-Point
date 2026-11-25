@@ -9,7 +9,7 @@ import { formatRemaining, useSessionLive, type SessionView } from './splitSessio
 import styles from './split.module.css';
 
 // QR is rendered locally from the link; no third-party call. Output is our own generated SVG.
-function Qr({ text }: { text: string }) {
+export function Qr({ text }: { text: string }) {
   const qr = qrcode(0, 'M');
   qr.addData(text);
   qr.make();

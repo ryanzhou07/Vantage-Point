@@ -67,3 +67,6 @@ Owner requested automatic removal of resolved worktrees. Orchestrator safely rem
 Owner decisions: AWS Secrets Manager + app-level AES-256-GCM; balances in first scope; manual refresh with reusable `SyncConnection`; removable Sandbox probe; local cert/key under `~/.config/vantage-point/teller/`; 5-minute cooldown. Banking is a module of the single Go API (no microservice). Backlog: VP-009a/b/c, VP-010, VP-011; ADR-009 proposed. Original VP-009 split into 009a/b/c.
 
 Added VP-014 (import-boundary CI check, BACKLOG) and ADR-010 (modular monolith split strategy, PROPOSED).
+
+## Banking/Plaid status - 2026-11-22
+Teller is shut down (ADR-011). VP-018 a-d (Plaid secrets/config, adapter, connections API/schema, Dashboard Link launcher) are on `main` (PR #30). VP-018 is in REVIEW pending owner Sandbox check and Integration Review. VP-009b, VP-009c, VP-010 are OBSOLETE (Teller). VP-011 is re-scoped to Plaid accounts/balances and is the next Banking task. Earlier Teller entries above are historical.

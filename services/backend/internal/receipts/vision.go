@@ -160,7 +160,7 @@ func (g *Gemini) Extract(ctx context.Context, image []byte, mime string) (Propos
 	for n := range p.Items {
 		p.Items[n].Name = SanitizeText(p.Items[n].Name)
 		p.Items[n].ID = fmt.Sprintf("item-%03d", n+1)
-		p.Items[n].ParticipantID = ""
+		p.Items[n].ParticipantIDs = []string{}
 	}
 	if ValidateProposal(p) != nil {
 		return Proposal{}, &ProviderError{Code: "VISION_REVIEW_REQUIRED", Retryable: false}

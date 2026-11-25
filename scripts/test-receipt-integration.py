@@ -91,13 +91,13 @@ try:
         assert record['status'] == 'NEEDS_REVIEW', 'worker did not persist proposal'
         assert record['draft'] is None and record['preview'] is None, 'model output treated as verified'
         draft = {**record['proposal'], 'participants': [{'id': 'a', 'name': 'Student A', 'included': True}, {'id': 'b', 'name': 'Student B', 'included': True}], 'tax_method': 'equal', 'tip_method': 'proportional'}
-        draft['items'][0]['participant_id'] = 'a'
+        draft['items'][0]['participant_ids'] = ['a']
         version = record['version']
         payload = {'version': version, 'draft': draft, 'calculate': True}
         def save(): return request(api + '/api/v1/receipts/' + rid + '/review', owner, payload)
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
             results = list(pool.map(lambda _: save(), range(2)))
-        assert sorted(item[0] for item in results) == [200, 409], 'stale concurrent updates not rejected'
+        assert sorted(item[0] for item in results) == [200, 409], f'stale concurrent updates not rejected: {[(item[0], item[1]) for item in results]}'
         record = next(item[1] for item in results if item[0] == 200)
         assert sum(item['total_minor'] for item in record['preview']['shares']) == 1280, 'money conservation failed'
         assert record['status'] == 'NEEDS_REVIEW' and record['preview']['draft'] is True, 'draft finalized accidentally'

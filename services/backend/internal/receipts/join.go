@@ -2,6 +2,7 @@ package receipts
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net"
@@ -40,53 +41,22 @@ func (a *API) Join(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		in.ParticipantID = added.ID
-		a.Store.broadcast(r.Context(), s.ID)
+		go a.Store.broadcast(context.Background(), s.ID) // async: the reply must not wait on Realtime
 	}
 	rec, e := a.Store.get(r.Context(), s.OwnerID, s.ReceiptID)
 	if e != nil {
 		storeError(w, e)
 		return
 	}
-	type person struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	}
-	type line struct {
-		ID        string `json:"id"`
-		Name      string `json:"name"`
-		Amount    int64  `json:"amount_minor"`
-		ClaimedBy string `json:"claimed_by"`
-	}
 	out := map[string]any{"state": "ACTIVE", "server_time": stamp(now), "session": map[string]string{"id": s.ID, "expires_at": s.ExpiresAt}}
-	people, items := []person{}, []line{}
-	merchant, currency := "", ""
-	if rec.Draft != nil {
-		merchant, currency = SanitizeText(rec.Draft.Merchant), rec.Draft.Currency
-		for _, p := range rec.Draft.Participants {
-			if p.Included && p.Name != "" {
-				people = append(people, person{p.ID, SanitizeText(p.Name)})
-				if p.ID == in.ParticipantID {
-					out["participant"] = person{p.ID, SanitizeText(p.Name)}
-				}
-			}
-		}
-		for _, i := range rec.Draft.Items {
-			items = append(items, line{i.ID, SanitizeText(i.Name), i.Amount, i.ParticipantID})
-		}
-	}
-	if me, ok := out["participant"].(person); ok {
-		out["participant"] = map[string]any{"id": me.ID, "name": me.Name, "payment_method": s.PaymentMethod}
-	}
-	if in.ParticipantID != "" && out["participant"] == nil {
+	if !shareView(rec, in.ParticipantID, s.PaymentMethod, out) {
 		apiError(w, 404, "PARTICIPANT_NOT_FOUND", "That name is not on this receipt.")
 		return
 	}
-	out["receipt"], out["participants"], out["items"] = map[string]string{"merchant": merchant, "currency": currency}, people, items
 	jsonReply(w, 200, out)
 }
 
-// Claim lets a joined participant take or release one whole item line. The database
-// serializes racing claims; a held item returns 409 SPLIT_CLAIM_CONFLICT.
+// Claim lets a joined participant join or leave an item line; claimants split it evenly.
 func (a *API) Claim(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Token         string `json:"token"`
@@ -111,7 +81,7 @@ func (a *API) Claim(w http.ResponseWriter, r *http.Request) {
 		storeError(w, e)
 		return
 	}
-	a.Store.broadcast(r.Context(), s.ID)
+	go a.Store.broadcast(context.Background(), s.ID) // async: the reply must not wait on Realtime
 	jsonReply(w, 200, map[string]string{"state": "ok"})
 }
 
@@ -183,6 +153,45 @@ func (a *API) PaymentMethod(w http.ResponseWriter, r *http.Request) {
 		storeError(w, e)
 		return
 	}
-	a.Store.broadcast(r.Context(), s.ID)
+	go a.Store.broadcast(context.Background(), s.ID) // async: the reply must not wait on Realtime
 	jsonReply(w, 200, map[string]string{"state": "ok"})
+}
+
+// shareView fills the participant-facing receipt view shared by guest joins and trip members.
+// It reports false when participantID is set but not on the receipt.
+func shareView(rec Record, participantID string, method *string, out map[string]any) bool {
+	type person struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	type line struct {
+		ID        string   `json:"id"`
+		Name      string   `json:"name"`
+		Amount    int64    `json:"amount_minor"`
+		ClaimedBy []string `json:"claimed_by"`
+	}
+	people, items := []person{}, []line{}
+	merchant, currency := "", ""
+	var me *person
+	if rec.Draft != nil {
+		merchant, currency = SanitizeText(rec.Draft.Merchant), rec.Draft.Currency
+		for _, p := range rec.Draft.Participants {
+			if p.Included && p.Name != "" {
+				people = append(people, person{p.ID, SanitizeText(p.Name)})
+				if p.ID == participantID {
+					me = &person{p.ID, SanitizeText(p.Name)}
+				}
+			}
+		}
+		for _, i := range rec.Draft.Items {
+			items = append(items, line{i.ID, SanitizeText(i.Name), i.Amount, i.ParticipantIDs})
+		}
+	}
+	if me != nil {
+		out["participant"] = map[string]any{"id": me.ID, "name": me.Name, "payment_method": method}
+	} else if participantID != "" {
+		return false
+	}
+	out["receipt"], out["participants"], out["items"] = map[string]string{"merchant": merchant, "currency": currency}, people, items
+	return true
 }

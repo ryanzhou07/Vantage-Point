@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -21,6 +22,7 @@ const (
 
 // fakeDB emulates the split_session_* RPC semantics and records every request body.
 type fakeDB struct {
+	mu     sync.Mutex
 	bodies []string
 	hash   string
 	exp    time.Time
@@ -29,7 +31,9 @@ type fakeDB struct {
 
 func (f *fakeDB) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	b, _ := io.ReadAll(r.Body)
+	f.mu.Lock()
 	f.bodies = append(f.bodies, string(b))
+	f.mu.Unlock()
 	var in map[string]any
 	_ = json.Unmarshal(b, &in)
 	fail := func(m string) { w.WriteHeader(400); _, _ = w.Write([]byte(`{"message":"` + m + `"}`)) }
@@ -129,12 +133,12 @@ func TestSessionExpiryTokenReplacementAndNoRawToken(t *testing.T) {
 	if _, e := a.Store.CheckSession(ctx, token, clock); e == nil {
 		t.Fatal("previous token still valid")
 	}
-	for _, b := range db.bodies {
+	for _, b := range db.all() {
 		if strings.Contains(b, token) || strings.Contains(b, out2["token"].(string)) {
 			t.Fatal("raw token sent to storage")
 		}
 	}
-	if !strings.Contains(strings.Join(db.bodies, ""), hashToken(token)) {
+	if !strings.Contains(strings.Join(db.all(), ""), hashToken(token)) {
 		t.Fatal("hash not stored")
 	}
 }
@@ -172,4 +176,11 @@ func TestSessionCreationRateLimitedAndTTLConfig(t *testing.T) {
 			t.Fatal(v, d, e)
 		}
 	}
+}
+
+// all snapshots bodies; Join now broadcasts asynchronously, so a request can still be in flight.
+func (f *fakeDB) all() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.bodies...)
 }
