@@ -15,11 +15,11 @@ const MaxItems = 200
 const MaxParticipants = 40
 
 type Item struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	Quantity      int    `json:"quantity"`
-	Amount        int64  `json:"amount_minor"` // Complete line amount, never unit price.
-	ParticipantID string `json:"participant_id"`
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Quantity       int      `json:"quantity"`
+	Amount         int64    `json:"amount_minor"`    // Complete line amount, never unit price.
+	ParticipantIDs []string `json:"participant_ids"` // Claimants share the line evenly.
 }
 type Participant struct {
 	ID       string `json:"id"`
@@ -110,14 +110,30 @@ func Calculate(d Draft) (Preview, error) {
 	}
 	var sum int64
 	for _, item := range d.Items {
-		n, ok := byID[item.ParticipantID]
-		if !ok {
-			return fail("Assign every whole item line to a participant.")
+		if len(item.ParticipantIDs) == 0 {
+			return fail("Assign every item line to at least one participant.")
 		}
-		if !people[n].Included {
-			return fail("Participants with assigned items must be included.")
+		idx := make([]int, 0, len(item.ParticipantIDs))
+		seen := map[int]bool{}
+		for _, id := range item.ParticipantIDs {
+			n, ok := byID[id]
+			if !ok || seen[n] {
+				return fail("Assign every item line to existing, distinct participants.")
+			}
+			if !people[n].Included {
+				return fail("Participants with assigned items must be included.")
+			}
+			seen[n] = true
+			idx = append(idx, n)
 		}
-		shares[n].Items += item.Amount
+		sort.Ints(idx) // people is ID-sorted, so the remainder cents land deterministically.
+		ones := make([]int64, len(idx))
+		for k := range ones {
+			ones[k] = 1
+		}
+		for k, v := range distribute(item.Amount, ones, int64(len(idx))) {
+			shares[idx[k]].Items += v
+		}
 		sum += item.Amount
 	}
 	if sum != d.Subtotal || sum+d.Tax+d.Tip != d.Total {
@@ -146,7 +162,24 @@ func Calculate(d Draft) (Preview, error) {
 		if weight == 0 {
 			return fail("Include participants with a positive subtotal for proportional allocation, or choose equal with included participants.")
 		}
-		values := distribute(part.amount, weights, weight)
+		// Everyone gets the floor of their share; the leftover cents land on the owner
+		// (who fronts the bill) so no guest pays a rounded-up cent. Falls back to the first included person.
+		values := make([]int64, len(weights))
+		var used int64
+		for n, w := range weights {
+			values[n] = part.amount * w / weight
+			used += values[n]
+		}
+		rest := -1
+		for n, p := range people {
+			if p.Included && (rest < 0 || p.IsOwner) {
+				rest = n
+			}
+			if p.Included && p.IsOwner {
+				break
+			}
+		}
+		values[rest] += part.amount - used
 		for n, v := range values {
 			if part.tax {
 				shares[n].Tax = v
@@ -201,9 +234,11 @@ func canonicalizeDraft(receipt string, d Draft) Draft {
 	}
 	for n := range d.Items {
 		d.Items[n].ID = canonicalDraftID(receipt, "item", d.Items[n].ID)
-		if d.Items[n].ParticipantID != "" {
-			d.Items[n].ParticipantID = canonicalDraftID(receipt, "participant", d.Items[n].ParticipantID)
+		ids := []string{}
+		for _, id := range d.Items[n].ParticipantIDs {
+			ids = append(ids, canonicalDraftID(receipt, "participant", id))
 		}
+		d.Items[n].ParticipantIDs = ids
 	}
 	return d
 }

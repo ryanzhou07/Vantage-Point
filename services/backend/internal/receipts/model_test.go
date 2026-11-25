@@ -7,7 +7,7 @@ import (
 )
 
 func validDraft() Draft {
-	return Draft{Proposal: Proposal{Currency: "USD", Items: []Item{{ID: "one", Name: "One", Quantity: 1, Amount: 100, ParticipantID: "a"}, {ID: "two", Name: "Two", Quantity: 2, Amount: 200, ParticipantID: "b"}}, Subtotal: 300, Tax: 5, Tip: 1, Total: 306}, Participants: []Participant{{ID: "b", Name: "Bee", Included: true}, {ID: "a", Name: "Aye", Included: true}}, TaxMethod: "equal", TipMethod: "proportional"}
+	return Draft{Proposal: Proposal{Currency: "USD", Items: []Item{{ID: "one", Name: "One", Quantity: 1, Amount: 100, ParticipantIDs: []string{"a"}}, {ID: "two", Name: "Two", Quantity: 2, Amount: 200, ParticipantIDs: []string{"b"}}}, Subtotal: 300, Tax: 5, Tip: 1, Total: 306}, Participants: []Participant{{ID: "b", Name: "Bee", Included: true}, {ID: "a", Name: "Aye", Included: true}}, TaxMethod: "equal", TipMethod: "proportional"}
 }
 func TestSplitConservesAndOrders(t *testing.T) {
 	d := validDraft()
@@ -15,7 +15,7 @@ func TestSplitConservesAndOrders(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	want := []Share{{"a", 100, 3, 0, 103}, {"b", 200, 2, 1, 203}}
+	want := []Share{{"a", 100, 3, 1, 104}, {"b", 200, 2, 0, 202}}
 	if !reflect.DeepEqual(p.Shares, want) || p.Total != 306 || !p.Draft {
 		t.Fatalf("%+v", p)
 	}
@@ -58,7 +58,7 @@ func TestSplitProperties(t *testing.T) {
 	}
 }
 func TestSplitRejectsAmbiguityAndInvalidAssignments(t *testing.T) {
-	cases := map[string]func(*Draft){"unassigned": func(d *Draft) { d.Items[0].ParticipantID = "" }, "unknown": func(d *Draft) { d.Items[0].ParticipantID = "other" }, "excluded": func(d *Draft) { d.Participants[1].Included = false }, "duplicate": func(d *Draft) { d.Participants[0].ID = "a" }, "reconcile": func(d *Draft) { d.Total++ }, "subtotal": func(d *Draft) { d.Subtotal++ }, "discount": func(d *Draft) { d.Discount = 1 }, "method": func(d *Draft) { d.TipMethod = "" }, "overflow": func(d *Draft) { d.Items[0].Amount = 1 << 62 }, "negative": func(d *Draft) { d.Tax = -1 }, "quantity": func(d *Draft) { d.Items[0].Quantity = 0 }, "zero weights": func(d *Draft) {
+	cases := map[string]func(*Draft){"unassigned": func(d *Draft) { d.Items[0].ParticipantIDs = nil }, "unknown": func(d *Draft) { d.Items[0].ParticipantIDs = []string{"other"} }, "excluded": func(d *Draft) { d.Participants[1].Included = false }, "duplicate": func(d *Draft) { d.Participants[0].ID = "a" }, "reconcile": func(d *Draft) { d.Total++ }, "subtotal": func(d *Draft) { d.Subtotal++ }, "discount": func(d *Draft) { d.Discount = 1 }, "method": func(d *Draft) { d.TipMethod = "" }, "overflow": func(d *Draft) { d.Items[0].Amount = 1 << 62 }, "negative": func(d *Draft) { d.Tax = -1 }, "quantity": func(d *Draft) { d.Items[0].Quantity = 0 }, "zero weights": func(d *Draft) {
 		for n := range d.Items {
 			d.Items[n].Amount = 0
 		}
@@ -98,5 +98,28 @@ func TestLineAmountNotMultipliedByQuantity(t *testing.T) {
 	p, e := Calculate(d)
 	if e != nil || p.Shares[1].Items != 200 {
 		t.Fatal("quantity treated as unit price")
+	}
+}
+
+func TestSharedItemSplitsEvenlyWithStableRemainder(t *testing.T) {
+	d := validDraft()
+	d.Items[1].ParticipantIDs = []string{"b", "a"} // 200 -> 100 each; item one stays with a
+	d.Items[0].Amount, d.Items[0].ParticipantIDs, d.Subtotal, d.Total = 101, []string{"a", "b"}, 301, 307
+	p, err := Calculate(d)
+	if err != nil || p.Shares[0].Items != 151 || p.Shares[1].Items != 150 { // 101 -> a gets the extra cent
+		t.Fatal(p, err)
+	}
+	d.Items[0].ParticipantIDs = []string{"a", "a"}
+	if _, err := Calculate(d); err == nil {
+		t.Fatal("duplicate claimant accepted")
+	}
+}
+
+func TestTaxTipFloorLeavesRemainderWithOwner(t *testing.T) {
+	d := validDraft()
+	d.Participants[0].IsOwner = true // "b" (index 0 in the fixture) fronts the bill
+	p, err := Calculate(d)
+	if err != nil || p.Shares[0].Tax != 2 || p.Shares[1].Tax != 3 || p.Shares[0].Tip != 0 || p.Shares[1].Tip != 1 {
+		t.Fatal(p, err)
 	}
 }

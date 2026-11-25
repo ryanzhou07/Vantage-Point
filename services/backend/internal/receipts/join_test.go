@@ -36,7 +36,7 @@ func TestJoinExpiryParticipantsAndNoOwnerLeak(t *testing.T) {
 		t.Fatal(code, out)
 	}
 	// The payment method rides on the session check: no extra database call per poll.
-	if me, _ := out["participant"].(map[string]any); me["payment_method"] != "VENMO" || strings.Contains(strings.Join(db.bodies, ""), "participant_method") {
+	if me, _ := out["participant"].(map[string]any); me["payment_method"] != "VENMO" || strings.Contains(strings.Join(db.all(), ""), "participant_method") {
 		t.Fatal("payment method missing or fetched with an extra call", out["participant"])
 	}
 	if code, _ = join(a, `{"token":"`+tok+`","participant_id":"p2"}`); code != 404 {
@@ -49,7 +49,7 @@ func TestJoinExpiryParticipantsAndNoOwnerLeak(t *testing.T) {
 	if code, _ = join(a, `{"token":"nope"}`); code != 401 {
 		t.Fatal(code)
 	}
-	for _, b := range db.bodies {
+	for _, b := range db.all() {
 		if strings.Contains(b, tok) {
 			t.Fatal("raw token reached storage")
 		}
@@ -90,7 +90,7 @@ func TestOpenJoinByNameAndClaimConflictAndExpiry(t *testing.T) {
 	_, created := call(a, ownerA, "POST", "/session")
 	tok := created["token"].(string)
 	join(a, `{"token":"`+tok+`","name":"Jo"}`)
-	if !strings.Contains(strings.Join(db.bodies, ""), `"p_name":"Jo"`) {
+	if !strings.Contains(strings.Join(db.all(), ""), `"p_name":"Jo"`) {
 		t.Fatal("typed name did not reach split_join_add")
 	}
 	p := "44444444-4444-4444-8444-444444444444"
@@ -118,7 +118,7 @@ func TestOwnerDeleteIsOwnerScoped(t *testing.T) {
 	if code, out := call(a, ownerA, "DELETE", ""); code != 200 || out["deleted"] != true {
 		t.Fatal(code, out)
 	}
-	if !strings.Contains(strings.Join(db.bodies, ""), `"p_owner":"`+ownerA+`"`) {
+	if !strings.Contains(strings.Join(db.all(), ""), `"p_owner":"`+ownerA+`"`) {
 		t.Fatal("delete did not use verified owner")
 	}
 }
@@ -137,7 +137,7 @@ func TestFinalizeAndPaidRoutesAreOwnerScoped(t *testing.T) {
 	r = httptest.NewRequest("POST", "/api/v1/receipts/"+rid+"/finalize", strings.NewReader(`{"version":4}`))
 	r.Header.Set("Content-Type", "application/json")
 	a.serve(w, r, ownerA)
-	if w.Code != 200 || !strings.Contains(strings.Join(db.bodies, ""), `"p_version":4`) {
+	if w.Code != 200 || !strings.Contains(strings.Join(db.all(), ""), `"p_version":4`) {
 		t.Fatal(w.Code, w.Body.String())
 	}
 	w = httptest.NewRecorder()

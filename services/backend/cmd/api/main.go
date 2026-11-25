@@ -46,6 +46,8 @@ func main() {
 	if bankingAPI := newBankingAPI(); bankingAPI != nil {
 		bankingAPI.Mount(mux, auth)
 	}
+	mux.Handle("/api/v1/trips", receiptAPI)
+	mux.Handle("/api/v1/trips/", receiptAPI)
 	mux.Handle("/api/v1/receivables", receiptAPI)
 	mux.Handle("/api/v1/receivables/", receiptAPI)
 	server := &http.Server{Addr: ":" + port, Handler: mux, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16384}
