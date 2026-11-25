@@ -91,7 +91,7 @@ try:
         assert record['status'] == 'NEEDS_REVIEW', 'worker did not persist proposal'
         assert record['draft'] is None and record['preview'] is None, 'model output treated as verified'
         draft = {**record['proposal'], 'participants': [{'id': 'a', 'name': 'Student A', 'included': True}, {'id': 'b', 'name': 'Student B', 'included': True}], 'tax_method': 'equal', 'tip_method': 'proportional'}
-        draft['items'][0]['participant_id'] = 'a'
+        draft['items'][0]['participant_ids'] = ['a']
         version = record['version']
         payload = {'version': version, 'draft': draft, 'calculate': True}
         def save(): return request(api + '/api/v1/receipts/' + rid + '/review', owner, payload)
