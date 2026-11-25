@@ -1,4 +1,4 @@
-export type Item = { id: string; name: string; quantity: number; amount_minor: number; participant_id: string };
+export type Item = { id: string; name: string; quantity: number; amount_minor: number; participant_ids: string[] };
 export type Participant = { id: string; name: string; included: boolean; is_owner?: boolean };
 export type Proposal = {
   merchant: string; date: string; currency: string; items: Item[];
@@ -11,12 +11,14 @@ export type Preview = {
 };
 export type Receipt = {
   id: string; status: 'DRAFT' | 'PROCESSING' | 'NEEDS_REVIEW' | 'PROCESSING_FAILED' | 'FINALIZED'; version: number;
-  proposal: Proposal | null; draft: Draft | null; preview: Preview | null; error_code: string | null; retries: number; created_at: string;
+  proposal: Proposal | null; draft: Draft | null; preview: Preview | null; error_code: string | null; retries: number; created_at: string; collection_id?: string | null;
 };
 export function initialDraft(receipt: Receipt): Draft | null {
-  if (receipt.draft) return receipt.draft;
+  // Proposals extracted before shared items carry no participant_ids.
+  const fix = <T extends { items: Item[] }>(d: T): T => ({ ...d, items: d.items.map((i) => ({ ...i, participant_ids: i.participant_ids ?? [] })) });
+  if (receipt.draft) return fix(receipt.draft);
   if (!receipt.proposal) return null;
-  return { ...receipt.proposal, participants: [], tax_method: '', tip_method: '' };
+  return fix({ ...receipt.proposal, participants: [], tax_method: '', tip_method: '' });
 }
 export const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 

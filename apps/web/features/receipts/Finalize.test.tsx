@@ -6,12 +6,12 @@ import { ReceiptWorkspace } from './ReceiptWorkspace';
 import { receiptRequest, receivablesRequest } from './api';
 import type { Draft, Receipt } from './types';
 
-vi.mock('./api', () => ({ receiptRequest: vi.fn(), receivablesRequest: vi.fn(), postJSON: (body: unknown) => ({ method: 'POST', headers: {}, body: JSON.stringify(body) }) }));
+vi.mock('./api', () => ({ tripRequest: vi.fn(async () => ({ trips: [] })), receiptRequest: vi.fn(), receivablesRequest: vi.fn(), postJSON: (body: unknown) => ({ method: 'POST', headers: {}, body: JSON.stringify(body) }) }));
 vi.mock('./SplitSessionPanel', () => ({ SplitSessionPanel: () => null }));
 
 const draft: Draft = {
   merchant: 'Cafe', date: '2026-10-29', currency: 'USD', subtotal_minor: 800, tax_minor: 0, tip_minor: 0, discount_minor: 0, total_minor: 800, tax_method: 'equal', tip_method: 'equal',
-  items: [{ id: 'i1', name: 'Soup', quantity: 1, amount_minor: 500, participant_id: 'bob' }, { id: 'i2', name: 'Tea', quantity: 1, amount_minor: 300, participant_id: 'me' }],
+  items: [{ id: 'i1', name: 'Soup', quantity: 1, amount_minor: 500, participant_ids: ['bob'] }, { id: 'i2', name: 'Tea', quantity: 1, amount_minor: 300, participant_ids: ['me'] }],
   participants: [{ id: 'me', name: 'Ada', included: true, is_owner: true }, { id: 'bob', name: 'Bob', included: true }],
 };
 const preview = { draft: true as const, total_minor: 800, shares: [{ participant_id: 'me', items_minor: 300, tax_minor: 0, tip_minor: 0, total_minor: 300 }, { participant_id: 'bob', items_minor: 500, tax_minor: 0, tip_minor: 0, total_minor: 500 }] };

@@ -17,8 +17,9 @@ export function JoinSplit() {
   const [name, setName] = useState('');
   const [problem, setProblem] = useState('');
 
-  const load = useCallback(async (typedName?: string) => {
-    if (!token.current) { setPhase('expired'); return; }
+  const busy = useRef(false);
+  const again = useRef(false);
+  const fetchOnce = useCallback(async (typedName?: string) => {
     try {
       let next = await joinRequest(token.current, chosen.current, typedName);
       if (!mounted.current) return;
@@ -40,6 +41,16 @@ export function JoinSplit() {
       else setPhase((p) => (p === 'ready' ? p : 'unavailable'));
     }
   }, []);
+  // Coalesce overlapping refreshes (own claim reload + own Realtime echo) into one follow-up fetch.
+  const load = useCallback(async (typedName?: string) => {
+    if (!token.current) { setPhase('expired'); return; }
+    if (busy.current && !typedName) { again.current = true; return; }
+    busy.current = true;
+    try {
+      let typed = typedName;
+      do { again.current = false; await fetchOnce(typed); typed = undefined; } while (again.current && mounted.current);
+    } finally { busy.current = false; }
+  }, [fetchOnce]);
   useEffect(() => {
     mounted.current = true;
     token.current = window.location.hash.slice(1);
@@ -50,6 +61,8 @@ export function JoinSplit() {
   async function claim(itemId: string, release: boolean) {
     if (!view?.participant) return;
     setProblem('');
+    const me = view.participant.id; // optimistic: show the tap now; the reload below is authoritative and reverts on conflict
+    setView((v) => v && { ...v, items: v.items?.map((i) => i.id === itemId ? { ...i, claimed_by: release ? i.claimed_by.filter((x) => x !== me) : [...i.claimed_by, me] } : i) });
     try { await claimRequest(token.current, view.participant.id, itemId, release); }
     catch (e) {
       if (e instanceof JoinError && e.message === 'conflict') setProblem('Someone else already claimed that item.');
@@ -93,11 +106,11 @@ export function JoinSplit() {
               <legend>Tap the items you had</legend>
               {(view.items ?? []).length === 0 && <p>No items yet. Ask the owner to finish reviewing the receipt.</p>}
               {(view.items ?? []).map((i) => {
-                const mine = i.claimed_by === view.participant!.id;
-                const holder = view.participants.find((p) => p.id === i.claimed_by)?.name;
+                const mine = i.claimed_by.includes(view.participant!.id);
+                const others = view.participants.filter((p) => p.id !== view.participant!.id && i.claimed_by.includes(p.id)).map((p) => p.name);
                 return (
-                  <Button key={i.id} variant={mine ? 'primary' : 'secondary'} aria-pressed={mine} disabled={!!i.claimed_by && !mine} onClick={() => void claim(i.id, mine)}>
-                    {i.name} · {formatMoney(i.amount_minor)} · {mine ? 'Yours (tap to release)' : holder ? `Taken by ${holder}` : 'Free'}
+                  <Button key={i.id} variant={mine ? 'primary' : 'secondary'} aria-pressed={mine} onClick={() => void claim(i.id, mine)}>
+                    {i.name} · {formatMoney(i.amount_minor)} · {mine ? 'Yours (tap to release)' : 'Free (tap to claim)'}{others.length > 0 && ` · also ${others.join(', ')}`}
                   </Button>
                 );
               })}
@@ -110,7 +123,7 @@ export function JoinSplit() {
                 </Button>
               ))}
             </fieldset>
-            <p>Your items: {formatMoney((view.items ?? []).filter((i) => i.claimed_by === view.participant!.id).reduce((n, i) => n + i.amount_minor, 0))} before tax and tip.</p>
+            <p>Your items: {formatMoney((view.items ?? []).filter((i) => i.claimed_by.includes(view.participant!.id)).reduce((n, i) => n + Math.floor(i.amount_minor / i.claimed_by.length), 0))} before tax and tip.</p>
           </>
           : <>
             <form className={styles.names} onSubmit={(e) => { e.preventDefault(); if (name.trim()) void load(name.trim()); }}>

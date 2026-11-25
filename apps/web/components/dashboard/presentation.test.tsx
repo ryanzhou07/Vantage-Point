@@ -8,7 +8,7 @@ import { destinationFor, destinations } from './navigation';
 vi.mock('next/navigation', () => ({ usePathname: () => '/dashboard/accounts' }));
 
 it('covers only MVP destinations and rejects unknown sections', () => {
-  expect(destinations.map((destination) => destination.slug)).toEqual(['institutions', 'accounts', 'transactions', 'recurring', 'receipts', 'receipt-history', 'receivables']);
+  expect(destinations.map((destination) => destination.slug)).toEqual(['institutions', 'accounts', 'transactions', 'recurring', 'receipts', 'collections', 'receipt-history', 'receivables']);
   expect(destinationFor('forecast')).toBeUndefined();
 });
 

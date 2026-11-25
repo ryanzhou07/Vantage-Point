@@ -30,7 +30,7 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('open join and claims', () => {
-  const items = (by: string) => [{ id: 'i1', name: 'Soup', amount_minor: 500, claimed_by: by }, { id: 'i2', name: 'Tea', amount_minor: 250, claimed_by: 'p1' }];
+  const items = (by: string) => [{ id: 'i1', name: 'Soup', amount_minor: 500, claimed_by: by ? [by] : [] }, { id: 'i2', name: 'Tea', amount_minor: 250, claimed_by: ['p1'] }];
   const me = { id: 'p2', name: 'Jo' };
 
   it('joins with a typed name, claims an item, and shows a conflict when someone else holds it', async () => {
@@ -44,12 +44,12 @@ describe('open join and claims', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Join' }));
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(JSON.parse(fetchMock.mock.calls.at(-1)![1].body).name).toBe('Jo');
-    expect(screen.getByRole('button', { name: /Tea.*Taken by/ }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('button', { name: /Tea.*also Sam/ }).hasAttribute('disabled')).toBe(false); // items are shareable
     fetchMock.mockImplementation((url: string) => url.endsWith('/claim') ? reply(409, { error: { code: 'SPLIT_CLAIM_CONFLICT', message: 'x' } }) : reply(200, joined({ participant: me, items: items('p1') })));
     fireEvent.click(screen.getByRole('button', { name: /Soup.*Free/ }));
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(screen.getByRole('alert').textContent).toMatch(/Someone else already claimed/);
-    expect(screen.getByRole('button', { name: /Soup.*Taken by/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Soup.*also Sam/ })).toBeTruthy();
   });
 
   it('shows my total and lets me release a claim', async () => {

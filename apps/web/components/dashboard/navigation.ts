@@ -10,9 +10,10 @@ export const destinations: readonly DashboardDestination[] = [
   { slug: 'accounts', label: 'Accounts & balances', group: 'Banking', description: 'View accounts and current balances from connected institutions.' },
   { slug: 'transactions', label: 'Transactions', group: 'Banking', description: 'Browse transaction history from your accounts.' },
   { slug: 'recurring', label: 'Recurring activity', group: 'Banking', description: 'Review detected recurring transactions and payments.' },
-  { slug: 'receipts', label: 'Receipt splitting', group: 'Receipt splitting', description: 'Upload, review and collaboratively split itemized receipts.' },
-  { slug: 'receipt-history', label: 'Receipt history', group: 'Receipt splitting', description: 'Review active and finalized receipts and their participants.' },
-  { slug: 'receivables', label: 'Receivables', group: 'Receipt splitting', description: 'Track amounts owed and manually record payment status.' },
+  { slug: 'receipts', label: 'Drafts', group: 'Receipt splitting', description: 'Upload, review and collaboratively split itemized receipts.' },
+  { slug: 'collections', label: 'Collections', group: 'Receipt splitting', description: 'Group receipts into collections and share trips with members.' },
+  { slug: 'receipt-history', label: 'Browse', group: 'Receipt splitting', description: 'Search drafts and finalized receipts and see what each person owes.' },
+  { slug: 'receivables', label: 'Owed to me', group: 'Receipt splitting', description: 'Track amounts owed and manually record payment status.' },
 ];
 
 export function destinationFor(slug: string) {

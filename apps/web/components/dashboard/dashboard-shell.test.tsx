@@ -118,7 +118,7 @@ it('supports keyboard-focusable grouped navigation and collapses only the select
   fireEvent.click(banking);
   expect(banking.getAttribute('aria-expanded')).toBe('false');
   expect(screen.queryByRole('link', { name: 'Accounts & balances' })).toBeNull();
-  expect(screen.getByRole('link', { name: 'Receipt history' })).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Browse' })).toBeTruthy();
   fireEvent.click(banking);
   expect(screen.getByRole('link', { name: 'Accounts & balances' }).getAttribute('href')).toBe('/dashboard/accounts');
 });

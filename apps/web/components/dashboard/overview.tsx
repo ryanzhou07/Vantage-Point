@@ -1,9 +1,11 @@
 import Link from 'next/link';
+import { PendingInvite } from '../../features/trips/PendingInvite';
 import { destinations } from './navigation';
 
 export function DashboardOverview() {
   return (
     <div className="space-y-8">
+      <PendingInvite />
       <div className="space-y-3">
         <p className="text-sm font-semibold uppercase tracking-widest text-teal-800">Overview</p>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Your financial workspace</h1>
