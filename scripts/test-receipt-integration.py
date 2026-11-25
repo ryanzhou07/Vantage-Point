@@ -97,7 +97,7 @@ try:
         def save(): return request(api + '/api/v1/receipts/' + rid + '/review', owner, payload)
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
             results = list(pool.map(lambda _: save(), range(2)))
-        assert sorted(item[0] for item in results) == [200, 409], 'stale concurrent updates not rejected'
+        assert sorted(item[0] for item in results) == [200, 409], f'stale concurrent updates not rejected: {[(item[0], item[1]) for item in results]}'
         record = next(item[1] for item in results if item[0] == 200)
         assert sum(item['total_minor'] for item in record['preview']['shares']) == 1280, 'money conservation failed'
         assert record['status'] == 'NEEDS_REVIEW' and record['preview']['draft'] is True, 'draft finalized accidentally'
