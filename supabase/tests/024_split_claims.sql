@@ -15,9 +15,11 @@ begin
  select version into v from public.receipts where id=r;
  perform public.split_claim(h,t,a,i,false);
  perform public.split_claim(h,t,a,i,false); -- idempotent for the holder
- begin perform public.split_claim(h,t,b,i,false);raise exception 'stole item';exception when raise_exception then if sqlerrm<>'SPLIT_CLAIM_CONFLICT' then raise;end if;end;
- perform public.split_claim(h,t,b,i,true); -- non-holder release is a no-op
- if (select participant_id from public.allocations where receipt_item_id=i)<>a then raise exception 'claim lost';end if;
+ perform public.split_claim(h,t,b,i,false); -- a second claimant shares the line
+ if (select count(*) from public.allocations where receipt_item_id=i and amount_minor=250)<>2 then raise exception 'not split evenly';end if;
+ perform public.split_claim(h,t,b,i,true);
+ if (select participant_id||amount_minor::text from public.allocations where receipt_item_id=i)<>a||'500' then raise exception 'claim lost';end if;
+ perform public.split_claim(h,t,b,i,true); -- releasing an unheld item is a no-op
  if (select version from public.receipts where id=r)<=v then raise exception 'version not bumped';end if;
  begin perform public.split_claim(h,t,gen_random_uuid(),i,false);raise exception 'foreign participant';exception when raise_exception then if sqlerrm<>'SPLIT_PARTICIPANT_NOT_FOUND' then raise;end if;end;
  begin perform public.split_claim(h,t,a,gen_random_uuid(),false);raise exception 'foreign item';exception when raise_exception then if sqlerrm<>'SPLIT_ITEM_NOT_FOUND' then raise;end if;end;
